@@ -9,7 +9,7 @@ import { TEST_DB } from './global-setup';
 const base = process.env.TEST_PG_URL ?? 'postgres://mediaradar:mediaradar_dev@localhost:5432';
 const WORKER_URL = `postgres://app_worker:app_worker_dev@localhost:5432/${TEST_DB}`;
 const ADMIN_URL = `${base}/${TEST_DB}`;
-const REDIS_URL = process.env.TEST_REDIS_URL ?? 'redis://localhost:6379';
+const REDIS_URL = process.env.TEST_REDIS_URL ?? 'redis://localhost:6379/15';
 const log = { info: () => {}, warn: () => {}, error: () => {} };
 
 let running: RunningWorker;
