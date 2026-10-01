@@ -381,7 +381,7 @@
 | Фильтры | `CRUD /saved-filters` |
 | Биллинг | `GET /billing/plans|subscription|usage|payments|invoices`, `POST /billing/checkout`, `POST /webhooks/yookassa` |
 | Платформа (админ) | `/admin/tenants`, `/admin/settings`, `/admin/flags`, `/admin/ai/*` (providers, models, routes, prompts, evals, budgets, usage), `/admin/queues`, `/admin/audit`, `/admin/discovery/*` |
-| Реалтайм | `WS /ws` (каналы: feed, filter, alerts, system) |
+| Реалтайм | `WS /v1/ws` (каналы: feed, filter, alerts, system) |
 | Исходящие вебхуки (Ф9) | События: `article.created`, `alert.fired`, `report.ready` — подпись HMAC |
 
 ---

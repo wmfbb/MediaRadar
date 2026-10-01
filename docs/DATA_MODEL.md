@@ -105,7 +105,7 @@ erDiagram
 
 | Таблица | Назначение | Ключевые поля |
 |---------|------------|---------------|
-| `articles` (**партиции по `published_at`, помесячно**) | Метаданные материала | `id, source_id, url, canonical_url, title, lead, published_at, fetched_at, language, author, image_key, content_hash, simhash, duplicate_of, story_id, visibility_tenant_id (NULL = общий), status, engagement jsonb` |
+| `articles` (**партиции по `published_at`, помесячно** — _в Фазе 0 таблица обычная, партиционирование вводится миграцией в Фазе 1 до появления реальных объёмов_) | Метаданные материала | `id, source_id, url, canonical_url, title, lead, published_at, fetched_at, language, author, image_key, content_hash, simhash, duplicate_of, story_id, visibility_tenant_id (NULL = общий), status, engagement jsonb` |
 | `article_texts` | Тело | `article_id, body_text, body_html_sanitized` (хранение/выдача — по `content_policy`) |
 | `article_versions` | Правки материала на сайте-источнике | `article_id, version, changed_at, diff_ref` |
 | `article_media` | Медиа | `article_id, kind, s3_key, source_url, meta jsonb` |
@@ -118,6 +118,7 @@ erDiagram
 **Индексы (основные):**
 - `articles (source_id, published_at DESC)`; `articles (published_at DESC)` (в каждой партиции); `articles (canonical_url)` уникально в пределах источника; `articles (content_hash)`.
 - Поиск ближайших дубликатов по SimHash: 64-битный хэш делится на 4 полосы по 16 бит, по каждой — индекс (banding/LSH); кандидаты уточняются расстоянием Хэмминга.
+- _Реализовано в Фазе 0:_ `articles.tsv` — генерируемый столбец (`russian`, заголовок A / лид B) с GIN, отдельный индекс `search_simple` для поиска по префиксу (стеммер Snowball не склоняет, напр., «Барнаул»/«барнаульский»), `pg_trgm` по заголовку. Отдельной таблицы `article_search` пока нет.
 - `article_search` — GIN по `tsv`; `articles.title` — GIN `pg_trgm` для подсказок/опечаток.
 - `article_facts` — GIN по массивам `topic_ids`, `geo_ids`, `entity_ids`; B-tree по `(sentiment_label, published_at)`.
 - `article_embeddings` — HNSW (косинусное расстояние).
