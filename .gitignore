@@ -11,3 +11,5 @@ playwright-report/
 test-results/
 .DS_Store
 tmp/
+dump.rdb
+*.tsbuildinfo

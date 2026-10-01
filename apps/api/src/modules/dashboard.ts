@@ -45,7 +45,8 @@ export async function dashboardRoutes(app: FastifyInstance, access: Access): Pro
         for (const row of rows) if (row.k >= 0 && row.k < 12) out[row.k] = row.n;
         return out;
       };
-      const [sparkAll, sparkNeg] = await Promise.all([spark(false), spark(true)]);
+      const sparkAll = await spark(false);
+      const sparkNeg = await spark(true);
       const src = (await q.query<{ active: number; total: number }>(
         `SELECT count(*) FILTER (WHERE s.status = 'active')::int AS active, count(*)::int AS total FROM tenant_sources ts JOIN sources s ON s.id = ts.source_id WHERE ts.enabled`)).rows[0]!;
       const alerts = (await q.query<{ n: number }>('SELECT coalesce(sum(fired_count), 0)::int AS n FROM alert_rules WHERE enabled')).rows[0]!.n;

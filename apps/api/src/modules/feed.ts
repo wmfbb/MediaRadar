@@ -60,7 +60,9 @@ export async function feedRoutes(app: FastifyInstance, access: Access): Promise<
       const rows = (await q.query<ArticleRow>(`SELECT ${ARTICLE_COLUMNS} ${ARTICLE_FROM} WHERE ${where} ORDER BY ${order} LIMIT $${params.length}${page}`, params)).rows;
       const hasMore = rows.length > limit;
       const pageRows = rows.slice(0, limit);
-      const [pr, ents] = await Promise.all([loadPolicyResolver(q, a.tenantId!), entitiesFor(q, pageRows.map((x) => x.id))]);
+      // Запросы идут последовательно: tenant-транзакция — одно соединение, параллельные q.query() на нём устарели в pg.
+      const pr = await loadPolicyResolver(q, a.tenantId!);
+      const ents = await entitiesFor(q, pageRows.map((x) => x.id));
       const items = pageRows.map((row) => articleDto(row, pr, ents.get(row.id)));
       const last = pageRows[pageRows.length - 1];
       return {
@@ -80,14 +82,12 @@ export async function feedRoutes(app: FastifyInstance, access: Access): Promise<
         const w = buildArticleWhere(f, a, { exclude });
         return (await q.query(`SELECT ${select}, count(*)::int AS count ${ARTICLE_FROM} WHERE ${w.sql}${extraWhere} GROUP BY ${group} ORDER BY count DESC LIMIT ${limit}`, w.params)).rows;
       };
-      const [topics, kinds, sentiment, geo, sources, allTopics] = await Promise.all([
-        run('topics', 't.key, t.name, t.color', 't.key, t.name, t.color', ' AND t.key IS NOT NULL'),
-        run('kinds', 's.kind AS key', 's.kind'),
-        run('sentiment', 'a.sentiment_label AS key', 'a.sentiment_label', ' AND a.sentiment_label IS NOT NULL'),
-        run('geo', 'g.name', 'g.name', ' AND g.name IS NOT NULL', 14),
-        run('sources', 's.id, s.name, s.domain', 's.id, s.name, s.domain', '', 20),
-        q.query<{ key: string; name: string; color: string }>('SELECT key, name, color FROM topics ORDER BY sort, name'),
-      ]);
+      const topics = await run('topics', 't.key, t.name, t.color', 't.key, t.name, t.color', ' AND t.key IS NOT NULL');
+      const kinds = await run('kinds', 's.kind AS key', 's.kind');
+      const sentiment = await run('sentiment', 'a.sentiment_label AS key', 'a.sentiment_label', ' AND a.sentiment_label IS NOT NULL');
+      const geo = await run('geo', 'g.name', 'g.name', ' AND g.name IS NOT NULL', 14);
+      const sources = await run('sources', 's.id, s.name, s.domain', 's.id, s.name, s.domain', '', 20);
+      const allTopics = await q.query<{ key: string; name: string; color: string }>('SELECT key, name, color FROM topics ORDER BY sort, name');
       const cnt = (rows: Array<Record<string, unknown>>, key: string) => new Map(rows.map((x) => [x[key] as string, x.count as number]));
       const tc = cnt(topics, 'key');
       const kc = cnt(kinds, 'key');
@@ -109,7 +109,8 @@ export async function feedRoutes(app: FastifyInstance, access: Access): Promise<
       const row = (await q.query<ArticleRow & { body_text: string | null }>(
         `SELECT ${ARTICLE_COLUMNS}, tx.body_text ${ARTICLE_FROM} LEFT JOIN article_texts tx ON tx.article_id = a.id WHERE a.id = $1 AND ${w.sql}`, [req.params.id, ...w.params])).rows[0];
       if (!row) throw new AppError('not_found', 'Материал не найден');
-      const [pr, ents] = await Promise.all([loadPolicyResolver(q, a.tenantId!), entitiesFor(q, [row.id])]);
+      const pr = await loadPolicyResolver(q, a.tenantId!);
+      const ents = await entitiesFor(q, [row.id]);
       const dto = articleDto(row, pr, ents.get(row.id));
       const body = dto.policy === 'full' ? row.body_text : null;
       const rel = buildArticleWhere({}, a, { startAt: 3 });
