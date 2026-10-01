@@ -19,5 +19,10 @@ export default tseslint.config(
     files: ['**/*.test.ts', '**/*.test.tsx', '**/scripts/**', '**/*.config.*', 'packages/db/src/seed/**', 'packages/db/src/cli/**'],
     rules: { 'no-console': 'off' },
   },
+  {
+    // в тестах ответы API читаются как JSON произвольной формы
+    files: ['**/*.test.ts', '**/test/**'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
+  },
   prettier,
 );

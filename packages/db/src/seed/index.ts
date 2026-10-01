@@ -76,9 +76,9 @@ function sentimentFor(rng: Rng, topic: TopicKey): { label: SentimentLabel; score
   return { label, score: Math.round((lo + rng.next() * (hi - lo)) * 1000) / 1000 };
 }
 
-/** Момент публикации: пик рабочих часов по Asia/Barnaul (UTC+7), больше материалов в последние 7 суток. */
+/** Момент публикации: пик рабочих часов по Asia/Barnaul (UTC+7); плотность слегка растёт к «сегодня» (умеренный рост, без скачков). */
 function publishedAt(rng: Rng, now: Date): Date {
-  const daysAgo = rng.chance(0.4) ? rng.int(0, 6) : rng.int(7, 89);
+  const daysAgo = Math.min(89, Math.floor(90 * rng.next() ** 1.15));
   const hour = rng.weighted(HOUR_WEIGHTS.map((w, h) => [h, w] as const));
   const base = new Date(now);
   base.setUTCHours(0, 0, 0, 0);
@@ -172,6 +172,7 @@ export async function seedDemo(client: pg.Client, opts: SeedOptions = {}): Promi
       ...main.map((s) => [tenantId['altai-krai'], s.id]),
       ...rep.map((s) => [tenantId['demo-republic'], s.id]),
       ...main.filter((s) => s.seed.sharedWithRepublic).map((s) => [tenantId['demo-republic'], s.id]),
+      [tenantId['demo-republic'], priv.id], // приватный источник тенанта тоже входит в его подписки
     ];
     await bulk(client, 'tenant_sources', ['tenant_id', 'source_id'], subRows);
     await bulk(client, 'source_configs', ['source_id', 'version', 'config', 'note'], allSources.map((s) => [s.id, 1, JSON.stringify(PARSER_CONFIGS[s.seed.parser]), 'Начальная конфигурация (демо)']));
