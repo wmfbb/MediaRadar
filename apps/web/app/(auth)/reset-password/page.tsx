@@ -25,17 +25,47 @@ function ResetForm() {
     }
   };
   return (
-    <AuthCard title="Новый пароль" footer={<Link className="font-semibold text-accent hover:underline" href="/login">Перейти ко входу</Link>}>
+    <AuthCard
+      title="Новый пароль"
+      footer={
+        <Link className="font-semibold text-accent hover:underline" href="/login">
+          Перейти ко входу
+        </Link>
+      }
+    >
       {done ? (
-        <p className="rounded-lg bg-ok-soft px-4 py-3 text-[13px] text-ok" role="status">Пароль изменён. Все прежние сессии завершены — войдите с новым паролем.</p>
+        <p className="rounded-lg bg-ok-soft px-4 py-3 text-[13px] text-ok" role="status">
+          Пароль изменён. Все прежние сессии завершены — войдите с новым паролем.
+        </p>
       ) : (
-        <AuthForm onSubmit={submit} error={err && !fieldError(err, 'password') ? errorMessage(err) : null} submit="Сохранить пароль" loading={loading}>
-          <Field label="Новый пароль" hint="Не короче 10 символов" error={fieldError(err, 'password')}>{(id) => <Input id={id} type="password" required autoFocus autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />}</Field>
+        <AuthForm
+          onSubmit={submit}
+          error={err && !fieldError(err, 'password') ? errorMessage(err) : null}
+          submit="Сохранить пароль"
+          loading={loading}
+        >
+          <Field label="Новый пароль" hint="Не короче 10 символов" error={fieldError(err, 'password')}>
+            {(id) => (
+              <Input
+                id={id}
+                type="password"
+                required
+                autoFocus
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            )}
+          </Field>
         </AuthForm>
       )}
     </AuthCard>
   );
 }
 export default function Page() {
-  return <Suspense><ResetForm /></Suspense>;
+  return (
+    <Suspense>
+      <ResetForm />
+    </Suspense>
+  );
 }

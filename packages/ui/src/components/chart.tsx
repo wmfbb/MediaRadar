@@ -7,16 +7,37 @@ import { CanvasRenderer } from 'echarts/renderers';
 import type { EChartsCoreOption } from 'echarts/core';
 import { cn } from '../cn';
 
-echarts.use([BarChart, LineChart, PieChart, GridComponent, LegendComponent, MarkLineComponent, TooltipComponent, CanvasRenderer]);
+echarts.use([
+  BarChart,
+  LineChart,
+  PieChart,
+  GridComponent,
+  LegendComponent,
+  MarkLineComponent,
+  TooltipComponent,
+  CanvasRenderer,
+]);
 
-export interface ChartTheme { fg: string; muted: string; line: string; surface: string; dark: boolean }
+export interface ChartTheme {
+  fg: string;
+  muted: string;
+  line: string;
+  surface: string;
+  dark: boolean;
+}
 
-const read = (name: string, fallback: string) => (typeof document === 'undefined' ? fallback : getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback);
+const read = (name: string, fallback: string) =>
+  typeof document === 'undefined'
+    ? fallback
+    : getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
 /** Цвета графиков берутся из токенов темы и обновляются при её смене (класс .dark на <html>). */
 export function useChartTheme(): ChartTheme {
   const compute = (): ChartTheme => ({
-    fg: read('--fg', '#0f172a'), muted: read('--muted', '#5b6b82'), line: read('--line', '#e9edf4'), surface: read('--surface', '#fff'),
+    fg: read('--fg', '#0f172a'),
+    muted: read('--muted', '#5b6b82'),
+    line: read('--line', '#e9edf4'),
+    surface: read('--surface', '#fff'),
     dark: typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
   });
   const [theme, setTheme] = useState<ChartTheme>(compute);
@@ -36,7 +57,17 @@ export const axisStyle = (t: ChartTheme) => ({
   splitLine: { lineStyle: { color: t.line } },
 });
 
-export function Chart({ option, height = 240, className, label }: { option: EChartsCoreOption; height?: number; className?: string; label: string }) {
+export function Chart({
+  option,
+  height = 240,
+  className,
+  label,
+}: {
+  option: EChartsCoreOption;
+  height?: number;
+  className?: string;
+  label: string;
+}) {
   const el = useRef<HTMLDivElement>(null);
   const inst = useRef<echarts.ECharts | null>(null);
   const t = useChartTheme();
@@ -59,14 +90,21 @@ export function Chart({ option, height = 240, className, label }: { option: ECha
       {
         animationDuration: 500,
         textStyle: { color: t.muted, fontFamily: 'Inter Variable, Inter, system-ui, sans-serif' },
-        tooltip: { backgroundColor: t.surface, borderColor: t.line, textStyle: { color: t.fg, fontSize: 12 }, ...(option as { tooltip?: object }).tooltip },
+        tooltip: {
+          backgroundColor: t.surface,
+          borderColor: t.line,
+          textStyle: { color: t.fg, fontSize: 12 },
+          ...(option as { tooltip?: object }).tooltip,
+        },
         ...option,
       },
       { notMerge: true },
     );
   }, [option, t]);
 
-  return <div ref={el} role="img" aria-label={label} className={cn('w-full', className)} style={{ height }} />;
+  return (
+    <div ref={el} role="img" aria-label={label} className={cn('w-full', className)} style={{ height }} />
+  );
 }
 
 export function Sparkline({ data, color, label }: { data: number[]; color: string; label: string }) {
@@ -76,7 +114,16 @@ export function Sparkline({ data, color, label }: { data: number[]; color: strin
     xAxis: { type: 'category', show: false, data: data.map((_, i) => i) },
     yAxis: { type: 'value', show: false, min: 0 },
     tooltip: { show: false },
-    series: [{ type: 'line', data, smooth: 0.4, symbol: 'none', lineStyle: { width: 1.8, color }, areaStyle: { color, opacity: 0.12 } }],
+    series: [
+      {
+        type: 'line',
+        data,
+        smooth: 0.4,
+        symbol: 'none',
+        lineStyle: { width: 1.8, color },
+        areaStyle: { color, opacity: 0.12 },
+      },
+    ],
   };
   return <Chart option={option} height={34} label={label} />;
 }

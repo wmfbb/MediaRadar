@@ -3,8 +3,19 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "scripts": { "lint": "eslint .", "typecheck": "tsc --noEmit", "test": "vitest run" },
-  "dependencies": { "@mediaradar/core": "workspace:*" },
-  "devDependencies": { "@types/node": "^22.10.0", "vitest": "^3.2.0" }
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mediaradar/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "vitest": "^3.2.0"
+  }
 }

@@ -8,7 +8,11 @@ let admin: Client;
 let tenants: { A: string; B: string };
 beforeAll(async () => {
   ctx = await createTestApp();
-  [owner, ownerB, admin] = await Promise.all([loginAs(ctx, 'a.prokhorov@altai.media'), loginAs(ctx, 'owner@altai-republic.demo'), loginAs(ctx, 'n.sergeeva@altai.media')]);
+  [owner, ownerB, admin] = await Promise.all([
+    loginAs(ctx, 'a.prokhorov@altai.media'),
+    loginAs(ctx, 'owner@altai-republic.demo'),
+    loginAs(ctx, 'n.sergeeva@altai.media'),
+  ]);
   tenants = await tenantIds();
 });
 afterAll(() => ctx.close());
@@ -38,7 +42,10 @@ describe('источники', () => {
     const body = { name: 'Тест-источник', url: 'https://example-news.ru/', kind: 'NEWS_SITE', parser: 'RSS' };
     const denied = await ownerB.post('/v1/sources', body);
     expect(denied.statusCode).toBe(403);
-    expect(denied.json().details).toMatchObject({ reason: 'plan_feature', entitlement: 'feature.private_sources' });
+    expect(denied.json().details).toMatchObject({
+      reason: 'plan_feature',
+      entitlement: 'feature.private_sources',
+    });
     const ok = await owner.post('/v1/sources', body);
     expect(ok.statusCode, ok.body).toBe(201);
     const s = (await owner.get(`/v1/sources/${ok.json().id}`)).json();
@@ -53,34 +60,66 @@ describe('источники', () => {
   });
 
   it('адреса внутренней сети и недопустимые схемы отклоняются (SSRF)', async () => {
-    for (const url of ['http://localhost/', 'http://10.0.0.1/', 'http://169.254.169.254/', 'file:///etc/passwd', 'https://u:p@example.ru/', 'http://[::ffff:10.0.0.1]/']) {
+    for (const url of [
+      'http://localhost/',
+      'http://10.0.0.1/',
+      'http://169.254.169.254/',
+      'file:///etc/passwd',
+      'https://u:p@example.ru/',
+      'http://[::ffff:10.0.0.1]/',
+    ]) {
       const res = await owner.post('/v1/sources', { name: 'Плохой', url, kind: 'NEWS_SITE', parser: 'RSS' });
       expect(res.statusCode, url).toBe(422);
     }
-    expect((await owner.post('/v1/sources', { name: 'X', url: 'https://example.org', kind: 'NEWS_SITE', parser: 'RSS', cron: 'bad' })).statusCode).toBe(422);
+    expect(
+      (
+        await owner.post('/v1/sources', {
+          name: 'X',
+          url: 'https://example.org',
+          kind: 'NEWS_SITE',
+          parser: 'RSS',
+          cron: 'bad',
+        })
+      ).statusCode,
+    ).toBe(422);
   });
 
   it('пауза/возобновление подписки, запуск, версии конфига; общие источники правит только платформа', async () => {
     const list = (await owner.get('/v1/sources')).json();
-    const shared = list.items.find((s: { isPrivate: boolean; domain: string }) => !s.isPrivate && s.domain === 'katun24.ru');
+    const shared = list.items.find(
+      (s: { isPrivate: boolean; domain: string }) => !s.isPrivate && s.domain === 'katun24.ru',
+    );
     expect((await owner.patch(`/v1/sources/${shared.id}`, { enabled: false })).statusCode).toBe(200);
     expect((await owner.get(`/v1/sources/${shared.id}`)).json().status).toBe('paused');
     expect((await owner.patch(`/v1/sources/${shared.id}`, { enabled: true })).statusCode).toBe(200);
     const run = await owner.post(`/v1/sources/${shared.id}/run`);
     expect(run.statusCode).toBe(202);
     expect(run.json()).toMatchObject({ implemented: false });
-    expect((await owner.put(`/v1/sources/${shared.id}/config`, { config: { connector: 'rss' } })).statusCode).toBe(403);
-    const priv = list.items.find((s: { isPrivate: boolean }) => s.isPrivate) ?? (await owner.get('/v1/sources')).json().items.find((s: { isPrivate: boolean }) => s.isPrivate);
-    const upd = await owner.put(`/v1/sources/${priv.id}/config`, { config: { connector: 'rss', feedUrl: 'https://example-news.ru/rss' }, note: 'тест' });
+    expect(
+      (await owner.put(`/v1/sources/${shared.id}/config`, { config: { connector: 'rss' } })).statusCode,
+    ).toBe(403);
+    const priv =
+      list.items.find((s: { isPrivate: boolean }) => s.isPrivate) ??
+      (await owner.get('/v1/sources')).json().items.find((s: { isPrivate: boolean }) => s.isPrivate);
+    const upd = await owner.put(`/v1/sources/${priv.id}/config`, {
+      config: { connector: 'rss', feedUrl: 'https://example-news.ru/rss' },
+      note: 'тест',
+    });
     expect(upd.statusCode, upd.body).toBe(200);
     expect(upd.json().version).toBe(2);
-    expect((await owner.put(`/v1/sources/${priv.id}/config`, { config: { no: 'connector' } })).statusCode).toBe(422);
+    expect(
+      (await owner.put(`/v1/sources/${priv.id}/config`, { config: { no: 'connector' } })).statusCode,
+    ).toBe(422);
     const versions = (await owner.get(`/v1/sources/${priv.id}`)).json().versions;
     expect(versions.filter((v: { isActive: boolean }) => v.isActive)).toHaveLength(1);
   });
 
   it('чужой источник по идентификатору недоступен', async () => {
-    const other = await withAdmin(async (c) => (await c.query<{ id: string }>("SELECT id FROM sources WHERE domain = 'altai-republic.ru'")).rows[0]!.id);
+    const other = await withAdmin(
+      async (c) =>
+        (await c.query<{ id: string }>("SELECT id FROM sources WHERE domain = 'altai-republic.ru'")).rows[0]!
+          .id,
+    );
     expect((await owner.get(`/v1/sources/${other}`)).statusCode).toBe(404);
     expect((await owner.patch(`/v1/sources/${other}`, { enabled: false })).statusCode).toBe(404);
     expect((await owner.post(`/v1/sources/${other}/run`)).statusCode).toBe(404);
@@ -93,7 +132,14 @@ describe('команда: участники, роли, приглашения',
     expect(members).toHaveLength(8 - 1); // 7 членов Алтайского края (Мария состоит в обоих тенантах)
     expect(members.map((m: { email: string }) => m.email)).not.toContain('owner@altai-republic.demo');
     const roles = (await owner.get('/v1/tenant/roles')).json().items;
-    expect(roles.map((r: { key: string }) => r.key)).toEqual(['OWNER', 'ADMIN', 'ANALYST', 'EDITOR', 'MODERATOR', 'VIEWER']);
+    expect(roles.map((r: { key: string }) => r.key)).toEqual([
+      'OWNER',
+      'ADMIN',
+      'ANALYST',
+      'EDITOR',
+      'MODERATOR',
+      'VIEWER',
+    ]);
     expect(roles.find((r: { key: string }) => r.key === 'VIEWER').permissions).toContain('feed:read');
   });
 
@@ -106,10 +152,21 @@ describe('команда: участники, роли, приглашения',
     const token = /token=([\w-]+)/.exec(mail.text)![1]!;
     const anon = new Client(ctx.app);
     const preview = (await anon.get(`/v1/auth/invitations/${token}`)).json();
-    expect(preview).toMatchObject({ email, tenantName: 'Алтайский край', roleName: 'Аналитик', accountExists: false });
+    expect(preview).toMatchObject({
+      email,
+      tenantName: 'Алтайский край',
+      roleName: 'Аналитик',
+      accountExists: false,
+    });
     expect((await anon.post('/v1/auth/invitations/accept', { token })).statusCode).toBe(422); // нужны имя и пароль
-    expect((await anon.post('/v1/auth/invitations/accept', { token, name: 'Новый Аналитик', password: 'short' })).statusCode).toBe(422);
-    expect((await anon.post('/v1/auth/invitations/accept', { token, name: 'Новый Аналитик', password: PASSWORD })).statusCode).toBe(200);
+    expect(
+      (await anon.post('/v1/auth/invitations/accept', { token, name: 'Новый Аналитик', password: 'short' }))
+        .statusCode,
+    ).toBe(422);
+    expect(
+      (await anon.post('/v1/auth/invitations/accept', { token, name: 'Новый Аналитик', password: PASSWORD }))
+        .statusCode,
+    ).toBe(200);
     const me = (await anon.get('/v1/auth/me')).json();
     expect(me.role.key).toBe('ANALYST');
     expect(me.tenant.slug).toBe('altai-krai');
@@ -117,39 +174,64 @@ describe('команда: участники, роли, приглашения',
   });
 
   it('приглашение существующего пользователя требует входа под его аккаунтом', async () => {
-    const res = await ownerB.post('/v1/tenant/invitations', { email: 'a.prokhorov@altai.media', roleKey: 'VIEWER' });
+    const res = await ownerB.post('/v1/tenant/invitations', {
+      email: 'a.prokhorov@altai.media',
+      roleKey: 'VIEWER',
+    });
     expect(res.statusCode, res.body).toBe(201);
     const token = /token=([\w-]+)/.exec(ctx.mailer.last()!.text)![1]!;
     expect((await new Client(ctx.app).post('/v1/auth/invitations/accept', { token })).statusCode).toBe(401);
     expect((await owner.post('/v1/auth/invitations/accept', { token })).statusCode).toBe(200);
     expect((await owner.get('/v1/auth/me')).json().tenants).toHaveLength(2);
-    await withAdmin((c) => c.query('DELETE FROM memberships WHERE tenant_id = $1 AND user_id = (SELECT id FROM users WHERE email = $2)', [tenants.B, 'a.prokhorov@altai.media']));
+    await withAdmin((c) =>
+      c.query(
+        'DELETE FROM memberships WHERE tenant_id = $1 AND user_id = (SELECT id FROM users WHERE email = $2)',
+        [tenants.B, 'a.prokhorov@altai.media'],
+      ),
+    );
     await owner.post('/v1/auth/switch-tenant', { tenantId: tenants.A });
   });
 
   it('лимит мест по тарифу: STARTER допускает 3 пользователя', async () => {
-    const r1 = await ownerB.post('/v1/tenant/invitations', { email: `seat1-${Date.now()}@example.com`, roleKey: 'VIEWER' });
+    const r1 = await ownerB.post('/v1/tenant/invitations', {
+      email: `seat1-${Date.now()}@example.com`,
+      roleKey: 'VIEWER',
+    });
     expect(r1.statusCode, r1.body).toBe(201); // 2 участника + 1 приглашение = 3
-    const r2 = await ownerB.post('/v1/tenant/invitations', { email: `seat2-${Date.now()}@example.com`, roleKey: 'VIEWER' });
+    const r2 = await ownerB.post('/v1/tenant/invitations', {
+      email: `seat2-${Date.now()}@example.com`,
+      roleKey: 'VIEWER',
+    });
     expect(r2.statusCode).toBe(403);
     expect(r2.json().details).toMatchObject({ reason: 'plan_limit', entitlement: 'seats' });
     const pending = (await ownerB.get('/v1/tenant/invitations')).json().items;
-    for (const inv of pending) expect((await ownerB.delete(`/v1/tenant/invitations/${inv.id}`)).statusCode).toBe(200);
+    for (const inv of pending)
+      expect((await ownerB.delete(`/v1/tenant/invitations/${inv.id}`)).statusCode).toBe(200);
   });
 
   it('правила смены ролей: нельзя себя, ADMIN не трогает владельца и не назначает владельцев', async () => {
-    const members = (await owner.get('/v1/tenant/members')).json().items as Array<{ id: string; email: string; roleKey: string }>;
+    const members = (await owner.get('/v1/tenant/members')).json().items as Array<{
+      id: string;
+      email: string;
+      roleKey: string;
+    }>;
     const me = members.find((m) => m.email === 'a.prokhorov@altai.media')!;
     const analyst = members.find((m) => m.email === 'm.kovaleva@altai.media')!;
     expect((await owner.patch(`/v1/tenant/members/${me.id}`, { roleKey: 'VIEWER' })).statusCode).toBe(403); // себя нельзя
     expect((await owner.patch(`/v1/tenant/members/${me.id}`, { status: 'blocked' })).statusCode).toBe(403);
     expect((await admin.patch(`/v1/tenant/members/${me.id}`, { roleKey: 'VIEWER' })).statusCode).toBe(403); // ADMIN не меняет владельца
     expect((await admin.patch(`/v1/tenant/members/${me.id}`, { status: 'blocked' })).statusCode).toBe(403);
-    expect((await admin.patch(`/v1/tenant/members/${analyst.id}`, { roleKey: 'OWNER' })).statusCode).toBe(403); // ADMIN не назначает владельца
+    expect((await admin.patch(`/v1/tenant/members/${analyst.id}`, { roleKey: 'OWNER' })).statusCode).toBe(
+      403,
+    ); // ADMIN не назначает владельца
     expect((await admin.delete(`/v1/tenant/members/${me.id}`)).statusCode).toBe(403);
     // владелец меняет роли других участников; изменения попадают в аудит
-    expect((await owner.patch(`/v1/tenant/members/${analyst.id}`, { roleKey: 'EDITOR' })).statusCode).toBe(200);
-    expect((await owner.patch(`/v1/tenant/members/${analyst.id}`, { roleKey: 'ANALYST' })).statusCode).toBe(200);
+    expect((await owner.patch(`/v1/tenant/members/${analyst.id}`, { roleKey: 'EDITOR' })).statusCode).toBe(
+      200,
+    );
+    expect((await owner.patch(`/v1/tenant/members/${analyst.id}`, { roleKey: 'ANALYST' })).statusCode).toBe(
+      200,
+    );
     expect((await owner.patch(`/v1/tenant/members/${analyst.id}`, { roleKey: 'GOD' })).statusCode).toBe(422);
     expect((await owner.patch(`/v1/tenant/members/${analyst.id}`, {})).statusCode).toBe(422);
     const events = (await owner.get('/v1/tenant/audit?action=tenant.member')).json().items;
@@ -174,7 +256,13 @@ describe('команда: участники, роли, приглашения',
 });
 
 describe('алерты', () => {
-  const rule = (name: string) => ({ name, level: 'mid', keywords: ['дизтопливо', 'цены'], channels: ['Telegram'], scope: ['Все источники'] });
+  const rule = (name: string) => ({
+    name,
+    level: 'mid',
+    keywords: ['дизтопливо', 'цены'],
+    channels: ['Telegram'],
+    scope: ['Все источники'],
+  });
 
   it('создание, переключение, удаление; личные правила меняет автор, командные — по праву', async () => {
     const created = await owner.post('/v1/alerts', rule('Тест-алерт владельца'));
@@ -192,13 +280,23 @@ describe('алерты', () => {
 
   it('валидация и лимит тарифа', async () => {
     expect((await owner.post('/v1/alerts', { ...rule('Без слов'), keywords: [] })).statusCode).toBe(422);
-    expect((await owner.post('/v1/alerts', { ...rule('Плохой канал'), channels: ['Голубь'] })).statusCode).toBe(422);
+    expect(
+      (await owner.post('/v1/alerts', { ...rule('Плохой канал'), channels: ['Голубь'] })).statusCode,
+    ).toBe(422);
     // STARTER: 5 правил (в демо-данных 1) — добираем до лимита и проверяем отказ
     const ids: string[] = [];
-    for (let i = 0; i < 4; i++) { const r = await ownerB.post('/v1/alerts', rule(`Лимит ${i}`)); expect(r.statusCode, r.body).toBe(201); ids.push(r.json().id); }
+    for (let i = 0; i < 4; i++) {
+      const r = await ownerB.post('/v1/alerts', rule(`Лимит ${i}`));
+      expect(r.statusCode, r.body).toBe(201);
+      ids.push(r.json().id);
+    }
     const over = await ownerB.post('/v1/alerts', rule('Сверх лимита'));
     expect(over.statusCode).toBe(403);
-    expect(over.json().details).toMatchObject({ reason: 'plan_limit', entitlement: 'alerts.rules', limit: 5 });
+    expect(over.json().details).toMatchObject({
+      reason: 'plan_limit',
+      entitlement: 'alerts.rules',
+      limit: 5,
+    });
     for (const id of ids) await ownerB.delete(`/v1/alerts/${id}`);
   });
 
@@ -216,15 +314,51 @@ describe('отчёты, тарифы, уведомления', () => {
     const tpl = (await owner.get('/v1/reports/templates')).json().items;
     expect(tpl).toHaveLength(6);
     const day = (d: number) => new Date(Date.now() - d * 864e5).toISOString();
-    const ok = await owner.post('/v1/reports/runs', { templateKey: 'mediametrics', format: 'pdf', from: day(30), to: day(0) });
+    const ok = await owner.post('/v1/reports/runs', {
+      templateKey: 'mediametrics',
+      format: 'pdf',
+      from: day(30),
+      to: day(0),
+    });
     expect(ok.statusCode, ok.body).toBe(202);
     expect(ok.json()).toMatchObject({ status: 'queued', implemented: false });
-    expect((await owner.post('/v1/reports/runs', { templateKey: 'mediametrics', format: 'pptx', from: day(30), to: day(0) })).json().details).toMatchObject({ reason: 'plan_feature' });
-    expect((await owner.post('/v1/reports/runs', { templateKey: 'nope', format: 'pdf', from: day(30), to: day(0) })).statusCode).toBe(404);
-    expect((await owner.post('/v1/reports/runs', { templateKey: 'mediametrics', format: 'pdf', from: day(0), to: day(30) })).statusCode).toBe(422);
+    expect(
+      (
+        await owner.post('/v1/reports/runs', {
+          templateKey: 'mediametrics',
+          format: 'pptx',
+          from: day(30),
+          to: day(0),
+        })
+      ).json().details,
+    ).toMatchObject({ reason: 'plan_feature' });
+    expect(
+      (
+        await owner.post('/v1/reports/runs', {
+          templateKey: 'nope',
+          format: 'pdf',
+          from: day(30),
+          to: day(0),
+        })
+      ).statusCode,
+    ).toBe(404);
+    expect(
+      (
+        await owner.post('/v1/reports/runs', {
+          templateKey: 'mediametrics',
+          format: 'pdf',
+          from: day(0),
+          to: day(30),
+        })
+      ).statusCode,
+    ).toBe(422);
     const runs = (await owner.get('/v1/reports/runs')).json().items;
     expect(runs.length).toBeGreaterThanOrEqual(6);
-    expect((await ownerB.get('/v1/reports/runs')).json().items.every((r: { name: string }) => !r.name.includes('Алтайского края'))).toBe(true);
+    expect(
+      (await ownerB.get('/v1/reports/runs'))
+        .json()
+        .items.every((r: { name: string }) => !r.name.includes('Алтайского края')),
+    ).toBe(true);
   });
 
   it('подписка: счётчики использования и признаки функций; платежи только владельцу; оплата — 501', async () => {
@@ -252,7 +386,11 @@ describe('отчёты, тарифы, уведомления', () => {
     const before = (await owner.get('/v1/notifications')).json();
     expect(before.items.length).toBeGreaterThanOrEqual(4);
     expect(before.unread).toBeGreaterThan(0);
-    expect((await ownerB.get('/v1/notifications')).json().items.some((n: { title: string }) => /Критический сюжет/.test(n.title))).toBe(false);
+    expect(
+      (await ownerB.get('/v1/notifications'))
+        .json()
+        .items.some((n: { title: string }) => /Критический сюжет/.test(n.title)),
+    ).toBe(false);
     expect((await owner.post('/v1/notifications/read-all')).statusCode).toBe(200);
     expect((await owner.get('/v1/notifications')).json().unread).toBe(0);
     expect((await ownerB.get('/v1/notifications')).json().unread).toBeGreaterThan(0); // чужие не затронуты

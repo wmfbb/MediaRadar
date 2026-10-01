@@ -7,7 +7,8 @@ const base = process.env.TEST_PG_URL ?? 'postgres://mediaradar:mediaradar_dev@lo
 export default async function setup() {
   const server = new pg.Client({ connectionString: `${base}/postgres` });
   await server.connect();
-  if (!(await server.query('SELECT 1 FROM pg_database WHERE datname = $1', [TEST_DB])).rowCount) await server.query(`CREATE DATABASE ${TEST_DB}`);
+  if (!(await server.query('SELECT 1 FROM pg_database WHERE datname = $1', [TEST_DB])).rowCount)
+    await server.query(`CREATE DATABASE ${TEST_DB}`);
   await server.end();
   const url = `${base}/${TEST_DB}`;
   await migrate({ connectionString: url, apiPassword: 'app_api_dev', workerPassword: 'app_worker_dev' });

@@ -24,12 +24,14 @@ export function registerSecurity(app: FastifyInstance, config: Config): void {
     if (!UNSAFE.has(req.method)) return;
     const origin = req.headers.origin;
     if (origin && !origins.has(origin)) throw new AppError('forbidden', 'Недопустимый источник запроса');
-    if (!origin && req.headers['sec-fetch-site'] === 'cross-site') throw new AppError('forbidden', 'Недопустимый источник запроса');
+    if (!origin && req.headers['sec-fetch-site'] === 'cross-site')
+      throw new AppError('forbidden', 'Недопустимый источник запроса');
     if ((req.routeOptions.config as { csrf?: boolean } | undefined)?.csrf === false) return;
     if (req.cookies[config.SESSION_COOKIE_NAME]) {
       const cookie = req.cookies[CSRF_COOKIE];
       const header = req.headers[CSRF_HEADER];
-      if (!cookie || typeof header !== 'string' || !eq(cookie, header)) throw new AppError('forbidden', 'Недействительный CSRF-токен. Обновите страницу.');
+      if (!cookie || typeof header !== 'string' || !eq(cookie, header))
+        throw new AppError('forbidden', 'Недействительный CSRF-токен. Обновите страницу.');
     }
   });
 }

@@ -20,7 +20,15 @@ export function useMe(): MeValue {
   return v;
 }
 
-export function MeProvider({ me, reload, children }: { me: Me; reload: () => Promise<unknown>; children: ReactNode }) {
+export function MeProvider({
+  me,
+  reload,
+  children,
+}: {
+  me: Me;
+  reload: () => Promise<unknown>;
+  children: ReactNode;
+}) {
   const { mutate } = useSWRConfig();
   // серверная тема пользователя применяется после входа (на этом устройстве могла быть другая)
   useEffect(() => {
@@ -34,17 +42,28 @@ export function MeProvider({ me, reload, children }: { me: Me; reload: () => Pro
     window.location.href = '/login';
   }, [mutate]);
 
-  const switchTenant = useCallback(async (tenantId: string) => {
-    await api('/v1/auth/switch-tenant', { method: 'POST', body: { tenantId } });
-    await mutate(() => true, undefined, { revalidate: true });
-    window.location.href = '/';
-  }, [mutate]);
+  const switchTenant = useCallback(
+    async (tenantId: string) => {
+      await api('/v1/auth/switch-tenant', { method: 'POST', body: { tenantId } });
+      await mutate(() => true, undefined, { revalidate: true });
+      window.location.href = '/';
+    },
+    [mutate],
+  );
 
   const perms = new Set(me.permissions);
-  return <Ctx.Provider value={{ me, can: (p) => perms.has(p), reload, logout, switchTenant }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ me, can: (p) => perms.has(p), reload, logout, switchTenant }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 /** Загружает /me. 401 — вход не выполнен. */
 export function useMeQuery() {
-  return useSWR<Me>('/v1/auth/me', fetcher, { shouldRetryOnError: false, revalidateOnFocus: true, dedupingInterval: 5000 });
+  return useSWR<Me>('/v1/auth/me', fetcher, {
+    shouldRetryOnError: false,
+    revalidateOnFocus: true,
+    dedupingInterval: 5000,
+  });
 }

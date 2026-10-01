@@ -3,9 +3,18 @@ import { hasZodFastifySchemaValidationErrors } from 'fastify-type-provider-zod';
 import { AppError, type ErrorCode } from '@mediaradar/core';
 
 const TITLES: Record<number, string> = {
-  400: 'Некорректный запрос', 401: 'Требуется вход', 403: 'Доступ запрещён', 404: 'Не найдено', 409: 'Конфликт',
-  413: 'Слишком большой запрос', 415: 'Неподдерживаемый тип', 422: 'Ошибка валидации', 423: 'Заблокировано',
-  429: 'Слишком много запросов', 500: 'Внутренняя ошибка', 501: 'Не реализовано',
+  400: 'Некорректный запрос',
+  401: 'Требуется вход',
+  403: 'Доступ запрещён',
+  404: 'Не найдено',
+  409: 'Конфликт',
+  413: 'Слишком большой запрос',
+  415: 'Неподдерживаемый тип',
+  422: 'Ошибка валидации',
+  423: 'Заблокировано',
+  429: 'Слишком много запросов',
+  500: 'Внутренняя ошибка',
+  501: 'Не реализовано',
 };
 
 interface PgError extends Error {
@@ -34,18 +43,41 @@ function fromPg(err: PgError): { status: number; code: ErrorCode; detail: string
 }
 
 export function registerErrors(app: FastifyInstance): void {
-  const send = (reply: FastifyReply, status: number, code: string, detail: string, extra: Record<string, unknown> = {}) =>
+  const send = (
+    reply: FastifyReply,
+    status: number,
+    code: string,
+    detail: string,
+    extra: Record<string, unknown> = {},
+  ) =>
     reply
       .status(status)
       .type('application/problem+json')
-      .send({ type: 'about:blank', title: TITLES[status] ?? 'Ошибка', status, code, detail, requestId: reply.request.id, ...extra });
+      .send({
+        type: 'about:blank',
+        title: TITLES[status] ?? 'Ошибка',
+        status,
+        code,
+        detail,
+        requestId: reply.request.id,
+        ...extra,
+      });
 
   app.setErrorHandler((err: FastifyError | AppError | PgError, req, reply) => {
     if (err instanceof AppError) {
-      return send(reply, err.status, err.code, err.message, err.details === undefined ? {} : { details: err.details });
+      return send(
+        reply,
+        err.status,
+        err.code,
+        err.message,
+        err.details === undefined ? {} : { details: err.details },
+      );
     }
     if (hasZodFastifySchemaValidationErrors(err)) {
-      const errors = err.validation.map((v) => ({ path: (v.instancePath || '/').replace(/^\//, '').replace(/\//g, '.') || '(тело запроса)', message: v.message ?? 'некорректное значение' }));
+      const errors = err.validation.map((v) => ({
+        path: (v.instancePath || '/').replace(/^\//, '').replace(/\//g, '.') || '(тело запроса)',
+        message: v.message ?? 'некорректное значение',
+      }));
       return send(reply, 422, 'validation_failed', 'Проверьте введённые данные', { errors });
     }
     const status = (err as FastifyError).statusCode;
@@ -53,7 +85,10 @@ export function registerErrors(app: FastifyInstance): void {
     if (status && status >= 400 && status < 500) return send(reply, status, 'bad_request', err.message);
     const pg = fromPg(err as PgError);
     if (pg) {
-      req.log.warn({ pgCode: (err as PgError).code, constraint: (err as PgError).constraint }, 'database constraint');
+      req.log.warn(
+        { pgCode: (err as PgError).code, constraint: (err as PgError).constraint },
+        'database constraint',
+      );
       return send(reply, pg.status, pg.code, pg.detail);
     }
     req.log.error({ err }, 'unhandled error');

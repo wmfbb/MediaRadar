@@ -1,7 +1,11 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest, onRequestAsyncHookHandler } from 'fastify';
 import { AppError, sha256, type PlatformRoleKey, type TenantRoleKey } from '@mediaradar/core';
 import {
-  PLATFORM_ROLE_PERMISSIONS, TENANT_ROLE_PERMISSIONS, requiresMfa, type MembershipScope, type Permission,
+  PLATFORM_ROLE_PERMISSIONS,
+  TENANT_ROLE_PERMISSIONS,
+  requiresMfa,
+  type MembershipScope,
+  type Permission,
 } from '@mediaradar/rbac';
 import { getSetting } from '@mediaradar/db';
 import type { AppDeps } from '../deps';
@@ -18,7 +22,12 @@ export interface AuthContext {
   /** Обязательная 2FA для роли, но пользователь её ещё не включил. */
   mfaSetupRequired: boolean;
   tenantId: string | null;
-  tenant: { slug: string; name: string; branding: Record<string, unknown>; regionProfile: Record<string, unknown> } | null;
+  tenant: {
+    slug: string;
+    name: string;
+    branding: Record<string, unknown>;
+    regionProfile: Record<string, unknown>;
+  } | null;
   tenantRole: TenantRoleKey | null;
   roleName: string | null;
   scope: MembershipScope;
@@ -40,11 +49,25 @@ declare module 'fastify' {
 }
 
 interface SessionRow {
-  id: string; user_id: string; tenant_id: string | null; mfa_verified: boolean; last_seen_at: Date;
-  email: string; display_name: string; locale: string; status: string; platform_role: PlatformRoleKey | null; totp_enabled: boolean;
+  id: string;
+  user_id: string;
+  tenant_id: string | null;
+  mfa_verified: boolean;
+  last_seen_at: Date;
+  email: string;
+  display_name: string;
+  locale: string;
+  status: string;
+  platform_role: PlatformRoleKey | null;
+  totp_enabled: boolean;
 }
 interface MemberRow {
-  scope: MembershipScope; role_key: TenantRoleKey; role_name: string; slug: string; name: string; branding: Record<string, unknown>;
+  scope: MembershipScope;
+  role_key: TenantRoleKey;
+  role_name: string;
+  slug: string;
+  name: string;
+  branding: Record<string, unknown>;
   region_profile: Record<string, unknown>;
 }
 
@@ -56,7 +79,9 @@ export const resetAuthCaches = () => {
 
 async function mfaEnforced(deps: AppDeps): Promise<boolean> {
   if (mfaCache && Date.now() - mfaCache.at < 15_000) return mfaCache.value;
-  const value = await deps.db.system((q) => getSetting<boolean>(q, 'auth.mfa.enforceForAdmins', {}), { readOnly: true });
+  const value = await deps.db.system((q) => getSetting<boolean>(q, 'auth.mfa.enforceForAdmins', {}), {
+    readOnly: true,
+  });
   mfaCache = { at: Date.now(), value };
   return value;
 }
@@ -71,7 +96,10 @@ export async function loadAuth(deps: AppDeps, token: string): Promise<AuthContex
     );
     const row = r.rows[0];
     if (row && Date.now() - row.last_seen_at.getTime() > 60_000)
-      await q.query('UPDATE sessions SET last_seen_at = now(), expires_at = GREATEST(expires_at, now() + make_interval(days => $2)) WHERE id = $1', [row.id, deps.config.SESSION_TTL_DAYS]);
+      await q.query(
+        'UPDATE sessions SET last_seen_at = now(), expires_at = GREATEST(expires_at, now() + make_interval(days => $2)) WHERE id = $1',
+        [row.id, deps.config.SESSION_TTL_DAYS],
+      );
     return row;
   });
   if (!s || s.status !== 'active') return null;
@@ -98,7 +126,10 @@ export async function loadAuth(deps: AppDeps, token: string): Promise<AuthContex
   if (tenantRole) for (const p of TENANT_ROLE_PERMISSIONS[tenantRole] ?? []) permissions.add(p);
   if (s.platform_role) for (const p of PLATFORM_ROLE_PERMISSIONS[s.platform_role]) permissions.add(p);
 
-  const mfaSetupRequired = !s.totp_enabled && requiresMfa({ tenantRole, platformRole: s.platform_role }) && (await mfaEnforced(deps));
+  const mfaSetupRequired =
+    !s.totp_enabled &&
+    requiresMfa({ tenantRole, platformRole: s.platform_role }) &&
+    (await mfaEnforced(deps));
 
   return {
     userId: s.user_id,
@@ -111,7 +142,14 @@ export async function loadAuth(deps: AppDeps, token: string): Promise<AuthContex
     mfaVerified: s.mfa_verified,
     mfaSetupRequired,
     tenantId: member ? s.tenant_id : null,
-    tenant: member ? { slug: member.slug, name: member.name, branding: member.branding, regionProfile: member.region_profile } : null,
+    tenant: member
+      ? {
+          slug: member.slug,
+          name: member.name,
+          branding: member.branding,
+          regionProfile: member.region_profile,
+        }
+      : null,
     tenantRole,
     roleName: member?.role_name ?? null,
     scope: member?.scope ?? {},
@@ -149,11 +187,16 @@ export function createAccess(app: FastifyInstance) {
     },
   });
   const needMfaVerified = (a: AuthContext) => {
-    if (!a.mfaVerified) throw new AppError('mfa_required', 'Подтвердите вход кодом двухфакторной аутентификации');
+    if (!a.mfaVerified)
+      throw new AppError('mfa_required', 'Подтвердите вход кодом двухфакторной аутентификации');
   };
   const needUser = (a: AuthContext) => {
     needMfaVerified(a);
-    if (a.mfaSetupRequired) throw new AppError('mfa_setup_required', 'Для вашей роли требуется включить двухфакторную аутентификацию');
+    if (a.mfaSetupRequired)
+      throw new AppError(
+        'mfa_setup_required',
+        'Для вашей роли требуется включить двухфакторную аутентификацию',
+      );
   };
   const needPermission = (a: AuthContext, perms: Permission[]) => {
     if (!perms.some((p) => a.permissions.has(p))) throw new AppError('forbidden', 'Недостаточно прав');

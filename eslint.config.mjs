@@ -5,7 +5,16 @@ import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/.next/**', '**/.turbo/**', '**/coverage/**', 'prototype/**', 'apps/web/next-env.d.ts'] },
+  {
+    ignores: [
+      '**/dist/**',
+      '**/.next/**',
+      '**/.turbo/**',
+      '**/coverage/**',
+      'prototype/**',
+      'apps/web/next-env.d.ts',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -17,7 +26,14 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.test.ts', '**/*.test.tsx', '**/scripts/**', '**/*.config.*', 'packages/db/src/seed/**', 'packages/db/src/cli/**'],
+    files: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/scripts/**',
+      '**/*.config.*',
+      'packages/db/src/seed/**',
+      'packages/db/src/cli/**',
+    ],
     rules: { 'no-console': 'off' },
   },
   {

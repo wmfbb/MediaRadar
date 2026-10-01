@@ -15,8 +15,18 @@ export async function verifyPassword(passwordHash: string, password: string): Pr
 }
 
 const COMMON = new Set([
-  'password123', 'qwerty12345', '1234567890', 'qwertyuiop', 'password1234', 'iloveyou123', '12345678910',
-  'йцукенгшщз', 'пароль12345', 'qwerty123456', 'admin12345', 'letmein12345',
+  'password123',
+  'qwerty12345',
+  '1234567890',
+  'qwertyuiop',
+  'password1234',
+  'iloveyou123',
+  '12345678910',
+  'йцукенгшщз',
+  'пароль12345',
+  'qwerty123456',
+  'admin12345',
+  'letmein12345',
 ]);
 
 /** Возвращает текст ошибки или null, если пароль приемлем. */
@@ -25,7 +35,11 @@ export function checkPasswordPolicy(password: string, ctx: { email?: string } = 
   if (password.length > 200) return 'Пароль слишком длинный';
   const lower = password.toLowerCase();
   if (COMMON.has(lower)) return 'Слишком простой пароль';
-  if (ctx.email && lower.includes(ctx.email.split('@')[0]!.toLowerCase()) && ctx.email.split('@')[0]!.length >= 4)
+  if (
+    ctx.email &&
+    lower.includes(ctx.email.split('@')[0]!.toLowerCase()) &&
+    ctx.email.split('@')[0]!.length >= 4
+  )
     return 'Пароль не должен содержать адрес почты';
   if (new Set(password).size < 5) return 'Слишком мало разных символов';
   return null;

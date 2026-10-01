@@ -14,7 +14,14 @@ const log = { info: () => {}, warn: () => {}, error: () => {} };
 
 let running: RunningWorker;
 beforeAll(async () => {
-  running = await startWorker({ redisUrl: REDIS_URL, databaseUrl: WORKER_URL, demoLive: false, demoIntervalSec: 1, healthPort: null, logger: log });
+  running = await startWorker({
+    redisUrl: REDIS_URL,
+    databaseUrl: WORKER_URL,
+    demoLive: false,
+    demoIntervalSec: 1,
+    healthPort: null,
+    logger: log,
+  });
 });
 afterAll(async () => {
   const q = new Queue(QUEUES.collect, { connection: { url: REDIS_URL } });
@@ -48,7 +55,9 @@ describe('воркер', () => {
       state = await job.getState();
     }
     expect(state).toBe('completed');
-    expect((await job.getState()) === 'completed' && (await q.getJob(job.id!))?.returnvalue).toEqual({ implemented: false });
+    expect((await job.getState()) === 'completed' && (await q.getJob(job.id!))?.returnvalue).toEqual({
+      implemented: false,
+    });
     await q.close();
   });
 
@@ -58,7 +67,8 @@ describe('воркер', () => {
       const c = new pg.Client({ connectionString: ADMIN_URL });
       await c.connect();
       try {
-        return (await c.query<{ id: string }>("SELECT id FROM tenants WHERE slug = 'altai-krai'")).rows[0]!.id;
+        return (await c.query<{ id: string }>("SELECT id FROM tenants WHERE slug = 'altai-krai'")).rows[0]!
+          .id;
       } finally {
         await c.end();
       }
@@ -71,26 +81,53 @@ describe('воркер', () => {
     let published = 0;
     // несколько попыток: источник выбирается случайно и может оказаться не из подписок тенанта «Алтайский край»
     for (let i = 0; i < 12 && received.length === 0; i++) {
-      await handleDemoLive((fn) => running.db.raw(fn), { publish: async (ch, p) => { published++; return pub.publish(ch, JSON.stringify(p)); } }, log);
+      await handleDemoLive(
+        (fn) => running.db.raw(fn),
+        {
+          publish: async (ch, p) => {
+            published++;
+            return pub.publish(ch, JSON.stringify(p));
+          },
+        },
+        log,
+      );
       await new Promise((r) => setTimeout(r, 60));
     }
     expect(published).toBeGreaterThan(0);
     expect(await articleCount()).toBeGreaterThan(before);
-    expect(received[0]).toMatchObject({ title: expect.any(String), source: { domain: expect.any(String) }, sentiment: { label: expect.stringMatching(/^(VP|P|N|NG|VN)$/) } });
+    expect(received[0]).toMatchObject({
+      title: expect.any(String),
+      source: { domain: expect.any(String) },
+      sentiment: { label: expect.stringMatching(/^(VP|P|N|NG|VN)$/) },
+    });
     expect(received[0]).not.toHaveProperty('tenantIds'); // служебные данные маршрутизации клиенту не уходят
     sub.disconnect();
     pub.disconnect();
   });
 
   it('планировщик demo-live создаёт повторяющееся задание и снимает его при выключении', async () => {
-    const on = await startWorker({ redisUrl: REDIS_URL, databaseUrl: WORKER_URL, demoLive: true, demoIntervalSec: 1, healthPort: null, logger: log });
+    const on = await startWorker({
+      redisUrl: REDIS_URL,
+      databaseUrl: WORKER_URL,
+      demoLive: true,
+      demoIntervalSec: 1,
+      healthPort: null,
+      logger: log,
+    });
     const q = new Queue(QUEUES.demoLive, { connection: { url: REDIS_URL } });
     expect((await q.getJobSchedulers()).map((s) => s.key)).toContain('demo-live-stream');
     await new Promise((r) => setTimeout(r, 2500));
     const completed = await q.getJobCounts('completed');
     expect(completed.completed).toBeGreaterThan(0);
     await on.close();
-    const off = await startWorker({ redisUrl: REDIS_URL, databaseUrl: WORKER_URL, demoLive: false, demoIntervalSec: 1, healthPort: null, logger: log });
+    const off = await startWorker({
+      redisUrl: REDIS_URL,
+      databaseUrl: WORKER_URL,
+      demoLive: false,
+      demoIntervalSec: 1,
+      healthPort: null,
+      logger: log,
+    });
     expect((await q.getJobSchedulers()).map((s) => s.key)).not.toContain('demo-live-stream');
     await off.close();
     await q.obliterate({ force: true });

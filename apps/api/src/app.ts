@@ -48,10 +48,16 @@ export async function buildApp(deps: AppDeps, opts: AppOptions = {}): Promise<Fa
   const app = Fastify({
     logger: {
       level: config.LOG_LEVEL,
-      redact: { paths: ['req.headers.cookie', 'req.headers.authorization', 'req.headers["x-csrf-token"]'], censor: '[скрыто]' },
+      redact: {
+        paths: ['req.headers.cookie', 'req.headers.authorization', 'req.headers["x-csrf-token"]'],
+        censor: '[скрыто]',
+      },
     },
     trustProxy: config.TRUST_PROXY,
-    genReqId: (req) => (typeof req.headers['x-request-id'] === 'string' && /^[\w.-]{8,64}$/.test(req.headers['x-request-id']) ? req.headers['x-request-id'] : randomUUID()),
+    genReqId: (req) =>
+      typeof req.headers['x-request-id'] === 'string' && /^[\w.-]{8,64}$/.test(req.headers['x-request-id'])
+        ? req.headers['x-request-id']
+        : randomUUID(),
     bodyLimit: 1_048_576,
   });
   app.setValidatorCompiler(validatorCompiler);
@@ -63,7 +69,12 @@ export async function buildApp(deps: AppDeps, opts: AppOptions = {}): Promise<Fa
   app.decorateRequest('authResolved', false);
   app.addHook('onRoute', (r) => {
     for (const method of Array.isArray(r.method) ? r.method : [r.method])
-      if (method !== 'HEAD' && method !== 'OPTIONS') app.routeTable.push({ method, url: r.url, access: (r.config as { access?: string } | undefined)?.access });
+      if (method !== 'HEAD' && method !== 'OPTIONS')
+        app.routeTable.push({
+          method,
+          url: r.url,
+          access: (r.config as { access?: string } | undefined)?.access,
+        });
   });
   app.addHook('onSend', async (req, reply) => {
     reply.header('x-request-id', req.id);
@@ -73,14 +84,22 @@ export async function buildApp(deps: AppDeps, opts: AppOptions = {}): Promise<Fa
   registerErrors(app);
   await app.register(cookie);
   await app.register(helmet, { contentSecurityPolicy: config.isProd ? undefined : false });
-  if (opts.rateLimit ?? !config.isTest) await app.register(rateLimit, { global: true, max: 600, timeWindow: '1 minute' });
+  if (opts.rateLimit ?? !config.isTest)
+    await app.register(rateLimit, { global: true, max: 600, timeWindow: '1 minute' });
 
   const docs = opts.docs ?? !config.isProd;
   if (docs) {
     await app.register(swagger, {
       openapi: {
-        info: { title: 'МедиаРадар API', version: '0.1.0', description: 'REST API платформы. Аутентификация — cookie-сессия + заголовок X-CSRF-Token для небезопасных методов.' },
-        components: { securitySchemes: { session: { type: 'apiKey', in: 'cookie', name: config.SESSION_COOKIE_NAME } } },
+        info: {
+          title: 'МедиаРадар API',
+          version: '0.1.0',
+          description:
+            'REST API платформы. Аутентификация — cookie-сессия + заголовок X-CSRF-Token для небезопасных методов.',
+        },
+        components: {
+          securitySchemes: { session: { type: 'apiKey', in: 'cookie', name: config.SESSION_COOKIE_NAME } },
+        },
       },
       transform: jsonSchemaTransform,
     });
@@ -94,8 +113,15 @@ export async function buildApp(deps: AppDeps, opts: AppOptions = {}): Promise<Fa
 
   await app.register(healthRoutes);
   const modules: Array<[string, RouteModule]> = [
-    ['auth', authRoutes], ['tenant', tenantRoutes], ['settings', settingsRoutes], ['feed', feedRoutes], ['dashboard', dashboardRoutes],
-    ['sources', sourcesRoutes], ['workspace', workspaceRoutes], ['admin', adminRoutes], ['ws', realtimeRoutes],
+    ['auth', authRoutes],
+    ['tenant', tenantRoutes],
+    ['settings', settingsRoutes],
+    ['feed', feedRoutes],
+    ['dashboard', dashboardRoutes],
+    ['sources', sourcesRoutes],
+    ['workspace', workspaceRoutes],
+    ['admin', adminRoutes],
+    ['ws', realtimeRoutes],
   ];
   for (const [, mod] of modules) await app.register(async (scope) => mod(scope, access), { prefix: '/v1' });
   return app;

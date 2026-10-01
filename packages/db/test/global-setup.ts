@@ -9,10 +9,16 @@ export default async function setup() {
   try {
     await admin.connect();
   } catch (e) {
-    throw new Error(`Тестовая БД недоступна (${ADMIN_URL}): ${(e as Error).message}\nЗапустите PostgreSQL (make deps-up) и создайте БД mediaradar_test.`);
+    throw new Error(
+      `Тестовая БД недоступна (${ADMIN_URL}): ${(e as Error).message}\nЗапустите PostgreSQL (make deps-up) и создайте БД mediaradar_test.`,
+    );
   }
   try {
-    await migrate({ connectionString: ADMIN_URL, apiPassword: 'app_api_dev', workerPassword: 'app_worker_dev' });
+    await migrate({
+      connectionString: ADMIN_URL,
+      apiPassword: 'app_api_dev',
+      workerPassword: 'app_worker_dev',
+    });
     await resetDemo(admin);
     await seedDemo(admin, { now: FIXED_NOW, articles: 600, password: 'Test-Passw0rd!' });
   } finally {

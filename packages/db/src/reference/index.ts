@@ -6,12 +6,48 @@ import { PLANS } from './plans';
 export { PLANS } from './plans';
 
 export const REPORT_TEMPLATES = [
-  { key: 'mediametrics', name: 'Медиаметрия региона', description: 'Объём публикаций, охват, топ источников, динамика по темам', icon: '📊', color: '#3363ff' },
-  { key: 'sentiment', name: 'Анализ тональности', description: 'Распределение и тренды настроений по секторам и гео', icon: '🎭', color: '#059669' },
-  { key: 'persons', name: 'Карта упоминаний персон', description: 'NER-извлечение, частотность, контекст, связи', icon: '👤', color: '#8b5cf6' },
-  { key: 'sources', name: 'Сравнение источников', description: 'Авторитетность, скорость, уникальность, доля негатива', icon: '⚖️', color: '#f59e0b' },
-  { key: 'industry', name: 'Отраслевой дайджест', description: 'Агросектор / пищепром / ТЭК: сводка за период', icon: '🌾', color: '#e11d48' },
-  { key: 'auto_review', name: 'Автообзор (AI)', description: 'Готовая статья-обзор, сгенерированная по собранным данным', icon: '✦', color: '#0f172a' },
+  {
+    key: 'mediametrics',
+    name: 'Медиаметрия региона',
+    description: 'Объём публикаций, охват, топ источников, динамика по темам',
+    icon: '📊',
+    color: '#3363ff',
+  },
+  {
+    key: 'sentiment',
+    name: 'Анализ тональности',
+    description: 'Распределение и тренды настроений по секторам и гео',
+    icon: '🎭',
+    color: '#059669',
+  },
+  {
+    key: 'persons',
+    name: 'Карта упоминаний персон',
+    description: 'NER-извлечение, частотность, контекст, связи',
+    icon: '👤',
+    color: '#8b5cf6',
+  },
+  {
+    key: 'sources',
+    name: 'Сравнение источников',
+    description: 'Авторитетность, скорость, уникальность, доля негатива',
+    icon: '⚖️',
+    color: '#f59e0b',
+  },
+  {
+    key: 'industry',
+    name: 'Отраслевой дайджест',
+    description: 'Агросектор / пищепром / ТЭК: сводка за период',
+    icon: '🌾',
+    color: '#e11d48',
+  },
+  {
+    key: 'auto_review',
+    name: 'Автообзор (AI)',
+    description: 'Готовая статья-обзор, сгенерированная по собранным данным',
+    icon: '✦',
+    color: '#0f172a',
+  },
 ];
 
 export const FEATURE_FLAGS = [
@@ -36,7 +72,10 @@ export async function syncReferenceData(client: pg.Client): Promise<void> {
       );
       const roleId = r.rows[0]!.id;
       const perms = TENANT_ROLE_PERMISSIONS[key as keyof typeof TENANT_ROLE_PERMISSIONS];
-      await client.query('DELETE FROM role_permissions WHERE role_id = $1 AND permission <> ALL($2::text[])', [roleId, perms]);
+      await client.query(
+        'DELETE FROM role_permissions WHERE role_id = $1 AND permission <> ALL($2::text[])',
+        [roleId, perms],
+      );
       await client.query(
         `INSERT INTO role_permissions (role_id, permission) SELECT $1, unnest($2::text[]) ON CONFLICT DO NOTHING`,
         [roleId, perms],

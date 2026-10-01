@@ -14,7 +14,11 @@ export default async function setup() {
   if (!exists.rowCount) await server.query(`CREATE DATABASE ${TEST_DB}`);
   await server.end();
 
-  await migrate({ connectionString: ADMIN_URL, apiPassword: 'app_api_dev', workerPassword: 'app_worker_dev' });
+  await migrate({
+    connectionString: ADMIN_URL,
+    apiPassword: 'app_api_dev',
+    workerPassword: 'app_worker_dev',
+  });
   const admin = new pg.Client({ connectionString: ADMIN_URL });
   await admin.connect();
   try {

@@ -53,38 +53,93 @@ export type PlatformPermission = (typeof PLATFORM_PERMISSIONS)[number];
 export type Permission = TenantPermission | PlatformPermission;
 
 const VIEWER: TenantPermission[] = [
-  'tenant:read', 'notification:read', 'feed:read', 'filter:manage_own', 'dashboard:read', 'dashboard:build_own',
-  'export:run', 'report:read', 'alert:manage_own', 'source:read',
+  'tenant:read',
+  'notification:read',
+  'feed:read',
+  'filter:manage_own',
+  'dashboard:read',
+  'dashboard:build_own',
+  'export:run',
+  'report:read',
+  'alert:manage_own',
+  'source:read',
 ];
 
 const MODERATOR: TenantPermission[] = [
-  'tenant:read', 'notification:read', 'feed:read', 'filter:manage_own', 'dashboard:read', 'report:read',
-  'alert:manage_own', 'source:read', 'article:moderate', 'article:edit_meta',
+  'tenant:read',
+  'notification:read',
+  'feed:read',
+  'filter:manage_own',
+  'dashboard:read',
+  'report:read',
+  'alert:manage_own',
+  'source:read',
+  'article:moderate',
+  'article:edit_meta',
 ];
 
 const EDITOR: TenantPermission[] = [
-  'tenant:read', 'notification:read', 'feed:read', 'filter:manage_own', 'dashboard:read', 'export:run',
-  'report:read', 'report:create', 'report:publish_auto', 'alert:manage_own', 'source:read', 'article:moderate',
-  'article:edit_meta', 'entity:edit',
+  'tenant:read',
+  'notification:read',
+  'feed:read',
+  'filter:manage_own',
+  'dashboard:read',
+  'export:run',
+  'report:read',
+  'report:create',
+  'report:publish_auto',
+  'alert:manage_own',
+  'source:read',
+  'article:moderate',
+  'article:edit_meta',
+  'entity:edit',
 ];
 
 const ANALYST: TenantPermission[] = [
-  'tenant:read', 'notification:read', 'feed:read', 'filter:manage_own', 'dashboard:read', 'dashboard:build_own',
-  'dashboard:build_team', 'analytics:build', 'export:run', 'report:read', 'report:create', 'report:schedule',
-  'alert:manage_own', 'alert:manage_team', 'source:read', 'source:propose', 'entity:edit',
+  'tenant:read',
+  'notification:read',
+  'feed:read',
+  'filter:manage_own',
+  'dashboard:read',
+  'dashboard:build_own',
+  'dashboard:build_team',
+  'analytics:build',
+  'export:run',
+  'report:read',
+  'report:create',
+  'report:schedule',
+  'alert:manage_own',
+  'alert:manage_team',
+  'source:read',
+  'source:propose',
+  'entity:edit',
 ];
 
 const ADMIN: TenantPermission[] = [
   ...new Set<TenantPermission>([
-    ...ANALYST, 'report:publish_auto', 'source:manage_private', 'article:moderate', 'article:edit_meta',
-    'user:read', 'user:manage', 'role:manage', 'tenant:settings_basic', 'apikey:manage', 'audit:read',
+    ...ANALYST,
+    'report:publish_auto',
+    'source:manage_private',
+    'article:moderate',
+    'article:edit_meta',
+    'user:read',
+    'user:manage',
+    'role:manage',
+    'tenant:settings_basic',
+    'apikey:manage',
+    'audit:read',
   ]),
 ];
 
 const OWNER: TenantPermission[] = [...TENANT_PERMISSIONS];
 
 export const TENANT_ROLE_PERMISSIONS: Record<TenantRoleKey, readonly TenantPermission[]> = {
-  OWNER, ADMIN, ANALYST, EDITOR, MODERATOR, VIEWER,
+  OWNER,
+  ADMIN,
+  ANALYST,
+  EDITOR,
+  MODERATOR,
+  VIEWER,
 };
 
 export const TENANT_ROLE_META: Record<TenantRoleKey, { name: string; description: string }> = {

@@ -5,7 +5,10 @@ pg.types.setTypeParser(20, (v) => Number(v));
 pg.types.setTypeParser(1700, (v) => Number(v));
 
 export type Queryable = {
-  query<R extends pg.QueryResultRow = pg.QueryResultRow>(text: string, params?: unknown[]): Promise<pg.QueryResult<R>>;
+  query<R extends pg.QueryResultRow = pg.QueryResultRow>(
+    text: string,
+    params?: unknown[],
+  ): Promise<pg.QueryResult<R>>;
 };
 
 export interface TenantContext {
@@ -33,7 +36,10 @@ export interface Db {
   close(): Promise<void>;
 }
 
-export function createDb(connectionString: string, opts: { max?: number; applicationName?: string } = {}): Db {
+export function createDb(
+  connectionString: string,
+  opts: { max?: number; applicationName?: string } = {},
+): Db {
   const pool = new pg.Pool({
     connectionString,
     max: opts.max ?? 10,
@@ -53,7 +59,8 @@ export function createDb(connectionString: string, opts: { max?: number; applica
     const client = await pool.connect();
     try {
       await client.query(o.readOnly ? 'BEGIN READ ONLY' : 'BEGIN');
-      for (const [k, v] of Object.entries(settings)) await client.query('SELECT set_config($1, $2, true)', [k, v]);
+      for (const [k, v] of Object.entries(settings))
+        await client.query('SELECT set_config($1, $2, true)', [k, v]);
       const result = await fn(client);
       await client.query('COMMIT');
       return result;

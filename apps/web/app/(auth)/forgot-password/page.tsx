@@ -23,12 +23,34 @@ export default function Page() {
     }
   };
   return (
-    <AuthCard title="Восстановление пароля" subtitle="Отправим ссылку для смены пароля на вашу почту" footer={<Link className="font-semibold text-accent hover:underline" href="/login">← Вернуться ко входу</Link>}>
+    <AuthCard
+      title="Восстановление пароля"
+      subtitle="Отправим ссылку для смены пароля на вашу почту"
+      footer={
+        <Link className="font-semibold text-accent hover:underline" href="/login">
+          ← Вернуться ко входу
+        </Link>
+      }
+    >
       {done ? (
-        <p className="rounded-lg bg-ok-soft px-4 py-3 text-[13px] text-ok" role="status">Если такой адрес зарегистрирован, письмо со ссылкой уже отправлено. Ссылка действует 1 час.</p>
+        <p className="rounded-lg bg-ok-soft px-4 py-3 text-[13px] text-ok" role="status">
+          Если такой адрес зарегистрирован, письмо со ссылкой уже отправлено. Ссылка действует 1 час.
+        </p>
       ) : (
         <AuthForm onSubmit={submit} error={error} submit="Отправить ссылку" loading={loading}>
-          <Field label="Email">{(id) => <Input id={id} type="email" required autoFocus autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />}</Field>
+          <Field label="Email">
+            {(id) => (
+              <Input
+                id={id}
+                type="email"
+                required
+                autoFocus
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            )}
+          </Field>
         </AuthForm>
       )}
     </AuthCard>

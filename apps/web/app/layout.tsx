@@ -6,8 +6,16 @@ import './globals.css';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 import { Providers } from './providers';
 
-export const metadata: Metadata = { title: { default: 'МедиаРадар', template: '%s · МедиаРадар' }, description: 'Платформа региональной медиа-аналитики' };
-export const viewport: Viewport = { themeColor: [{ media: '(prefers-color-scheme: light)', color: '#f5f7fa' }, { media: '(prefers-color-scheme: dark)', color: '#0a1020' }] };
+export const metadata: Metadata = {
+  title: { default: 'МедиаРадар', template: '%s · МедиаРадар' },
+  description: 'Платформа региональной медиа-аналитики',
+};
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f5f7fa' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a1020' },
+  ],
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

@@ -36,7 +36,12 @@ const config: NextConfig = {
       { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
       { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
     ];
-    return [{ source: '/:path*', headers: isProd ? [...common, { key: 'Content-Security-Policy', value: csp }] : common }];
+    return [
+      {
+        source: '/:path*',
+        headers: isProd ? [...common, { key: 'Content-Security-Policy', value: csp }] : common,
+      },
+    ];
   },
 };
 export default config;

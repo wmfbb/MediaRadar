@@ -25,7 +25,8 @@ function watchProblems(page: Page): string[] {
     if (m.type() === 'error') problems.push(`console.error: ${m.text()}`);
   });
   page.on('response', (r) => {
-    if (r.status() >= 400 && r.url().includes('/api/')) problems.push(`HTTP ${r.status()} ${r.request().method()} ${r.url()}`);
+    if (r.status() >= 400 && r.url().includes('/api/'))
+      problems.push(`HTTP ${r.status()} ${r.request().method()} ${r.url()}`);
   });
   return problems;
 }
@@ -150,7 +151,13 @@ test.describe('двухфакторная защита', () => {
     await loginAndWait(page, email);
     await page.goto('/account');
     await page.getByRole('button', { name: 'Включить' }).click();
-    const secret = (await page.locator('code').filter({ hasText: /^[A-Z2-7]{16,}$/ }).first().innerText()).trim();
+    const secret = (
+      await page
+        .locator('code')
+        .filter({ hasText: /^[A-Z2-7]{16,}$/ })
+        .first()
+        .innerText()
+    ).trim();
     const t0 = Date.now();
     const c0 = Math.floor(t0 / STEP);
     await page.getByLabel('Код', { exact: true }).fill(totpCode(secret, t0));

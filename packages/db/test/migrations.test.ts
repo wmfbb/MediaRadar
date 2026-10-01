@@ -24,10 +24,14 @@ describe('миграции', () => {
   it('справочные данные синхронизированы с кодом: 6 системных ролей, 4 тарифа, пресет тем', async () => {
     const { withAdmin } = await import('./helpers');
     const r = await withAdmin(async (c) => ({
-      roles: (await c.query("SELECT count(*)::int n FROM roles WHERE tenant_id IS NULL")).rows[0].n,
+      roles: (await c.query('SELECT count(*)::int n FROM roles WHERE tenant_id IS NULL')).rows[0].n,
       plans: (await c.query('SELECT count(*)::int n FROM plans')).rows[0].n,
       topics: (await c.query('SELECT count(*)::int n FROM topics WHERE tenant_id IS NULL')).rows[0].n,
-      ownerPerms: (await c.query("SELECT count(*)::int n FROM role_permissions rp JOIN roles r ON r.id = rp.role_id WHERE r.key = 'OWNER' AND r.tenant_id IS NULL")).rows[0].n,
+      ownerPerms: (
+        await c.query(
+          "SELECT count(*)::int n FROM role_permissions rp JOIN roles r ON r.id = rp.role_id WHERE r.key = 'OWNER' AND r.tenant_id IS NULL",
+        )
+      ).rows[0].n,
     }));
     expect(r.roles).toBe(6);
     expect(r.plans).toBe(4);

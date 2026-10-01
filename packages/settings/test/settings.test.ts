@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GROUP_TITLES, assertScopeAllowed, getDefinition, listDefinitions, parseSettingValue, requireDefinition,
-  resolveSetting, type StoredSetting,
+  GROUP_TITLES,
+  assertScopeAllowed,
+  getDefinition,
+  listDefinitions,
+  parseSettingValue,
+  requireDefinition,
+  resolveSetting,
+  type StoredSetting,
 } from '../src';
 
 describe('реестр', () => {
@@ -22,14 +28,35 @@ describe('реестр', () => {
   });
   it('содержит ключи из PRODUCT_SPEC §10.2', () => {
     for (const k of [
-      'content.policy.default.GOV_PORTAL', 'content.policy.default.NEWS_SITE', 'content.policy.default.TELEGRAM',
-      'content.policy.override', 'content.excerpt.maxChars', 'backfill.defaultDepthDays', 'backfill.maxDepthDays',
-      'backfill.rps', 'backfill.priority', 'schedule.minIntervalSec', 'schedule.maxIntervalSec',
-      'schedule.adaptive.enabled', 'fetch.respectRobots', 'fetch.perHostRps', 'fetch.userAgent',
-      'nlp.pipeline.stages.ner.enabled', 'ai.budget.monthlyTokens', 'ai.budget.hardStop', 'retention.rawHtmlDays',
-      'retention.articleDays', 'retention.aiCallLogDays', 'moderation.mode', 'alerts.dedupeWindowMin',
-      'reports.auto.requireReview', 'portal.public.enabled', 'portal.public.showFullText',
-      'discovery.territory.levels', 'legal.profile', 'ui.theme.default',
+      'content.policy.default.GOV_PORTAL',
+      'content.policy.default.NEWS_SITE',
+      'content.policy.default.TELEGRAM',
+      'content.policy.override',
+      'content.excerpt.maxChars',
+      'backfill.defaultDepthDays',
+      'backfill.maxDepthDays',
+      'backfill.rps',
+      'backfill.priority',
+      'schedule.minIntervalSec',
+      'schedule.maxIntervalSec',
+      'schedule.adaptive.enabled',
+      'fetch.respectRobots',
+      'fetch.perHostRps',
+      'fetch.userAgent',
+      'nlp.pipeline.stages.ner.enabled',
+      'ai.budget.monthlyTokens',
+      'ai.budget.hardStop',
+      'retention.rawHtmlDays',
+      'retention.articleDays',
+      'retention.aiCallLogDays',
+      'moderation.mode',
+      'alerts.dedupeWindowMin',
+      'reports.auto.requireReview',
+      'portal.public.enabled',
+      'portal.public.showFullText',
+      'discovery.territory.levels',
+      'legal.profile',
+      'ui.theme.default',
     ])
       expect(getDefinition(k), k).toBeDefined();
   });
@@ -52,7 +79,9 @@ describe('валидация', () => {
   });
   it('неизвестный ключ и недопустимый уровень', () => {
     expect(() => requireDefinition('no.such.key')).toThrow(/Неизвестная/);
-    expect(() => assertScopeAllowed(requireDefinition('fetch.userAgent'), 'tenant')).toThrow(/не может задаваться/);
+    expect(() => assertScopeAllowed(requireDefinition('fetch.userAgent'), 'tenant')).toThrow(
+      /не может задаваться/,
+    );
     expect(() => assertScopeAllowed(requireDefinition('ui.theme.default'), 'user')).not.toThrow();
   });
 });
@@ -77,6 +106,8 @@ describe('разрешение значения по уровням', () => {
     expect(resolveSetting(d, rows, { tenantId: T, sourceId: 's-2' })).toEqual({ value: 90, from: 'tenant' }));
   it('значения на недопустимом для ключа уровне игнорируются', () => {
     const ua = requireDefinition('fetch.userAgent');
-    expect(resolveSetting(ua, [{ scope_type: 'tenant', scope_id: T, value: 'evil' }], { tenantId: T }).from).toBe('default');
+    expect(
+      resolveSetting(ua, [{ scope_type: 'tenant', scope_id: T, value: 'evil' }], { tenantId: T }).from,
+    ).toBe('default');
   });
 });

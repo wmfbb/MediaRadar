@@ -14,7 +14,11 @@ describe('cn', () => {
 describe('Button', () => {
   it('в состоянии loading заблокирована и помечена aria-busy', () => {
     const onClick = vi.fn();
-    render(<Button loading onClick={onClick}>Сохранить</Button>);
+    render(
+      <Button loading onClick={onClick}>
+        Сохранить
+      </Button>,
+    );
     const b = screen.getByRole('button', { name: 'Сохранить' });
     expect(b).toBeDisabled();
     expect(b).toHaveAttribute('aria-busy', 'true');
@@ -48,20 +52,35 @@ describe('Switch', () => {
 
 describe('Field', () => {
   it('связывает подпись с полем и показывает ошибку как alert', () => {
-    render(<Field label="Email" error="Неверный формат">{(id) => <Input id={id} />}</Field>);
+    render(
+      <Field label="Email" error="Неверный формат">
+        {(id) => <Input id={id} />}
+      </Field>,
+    );
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Неверный формат');
   });
   it('подсказка скрывается, когда есть ошибка', () => {
-    const { rerender } = render(<Field label="Пароль" hint="От 10 символов">{(id) => <Input id={id} />}</Field>);
+    const { rerender } = render(
+      <Field label="Пароль" hint="От 10 символов">
+        {(id) => <Input id={id} />}
+      </Field>,
+    );
     expect(screen.getByText('От 10 символов')).toBeInTheDocument();
-    rerender(<Field label="Пароль" hint="От 10 символов" error="Слишком короткий">{(id) => <Input id={id} />}</Field>);
+    rerender(
+      <Field label="Пароль" hint="От 10 символов" error="Слишком короткий">
+        {(id) => <Input id={id} />}
+      </Field>,
+    );
     expect(screen.queryByText('От 10 символов')).toBeNull();
   });
 });
 
 describe('Segmented и Tabs', () => {
-  const opts = [{ value: 'a', label: 'Первый' }, { value: 'b', label: 'Второй' }] as const;
+  const opts = [
+    { value: 'a', label: 'Первый' },
+    { value: 'b', label: 'Второй' },
+  ] as const;
   it('Segmented переключает значение', () => {
     const onChange = vi.fn();
     render(<Segmented value="a" onChange={onChange} options={[...opts]} label="Период" />);
@@ -70,7 +89,16 @@ describe('Segmented и Tabs', () => {
   });
   it('Tabs показывает счётчики и выбранную вкладку', () => {
     const onChange = vi.fn();
-    render(<Tabs value="a" onChange={onChange} options={[{ value: 'a', label: 'Все', count: 18 }, { value: 'b', label: 'Пауза', count: 1 }]} />);
+    render(
+      <Tabs
+        value="a"
+        onChange={onChange}
+        options={[
+          { value: 'a', label: 'Все', count: 18 },
+          { value: 'b', label: 'Пауза', count: 1 },
+        ]}
+      />,
+    );
     expect(screen.getByRole('tab', { name: /Все/ })).toHaveAttribute('aria-selected', 'true');
     fireEvent.click(screen.getByRole('tab', { name: /Пауза/ }));
     expect(onChange).toHaveBeenCalledWith('b');

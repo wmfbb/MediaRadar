@@ -20,15 +20,26 @@ export interface TestCtx {
 }
 
 export async function createTestApp(opts: AppOptions = {}): Promise<TestCtx> {
-  const config = loadConfig({ NODE_ENV: 'test', DATABASE_URL: API_URL, LOG_LEVEL: process.env.TEST_LOG_LEVEL ?? 'silent', APP_BASE_URL: 'http://localhost:3000' });
+  const config = loadConfig({
+    NODE_ENV: 'test',
+    DATABASE_URL: API_URL,
+    LOG_LEVEL: process.env.TEST_LOG_LEVEL ?? 'silent',
+    APP_BASE_URL: 'http://localhost:3000',
+  });
   const db = createDb(API_URL, { max: 6, applicationName: 'test-api' });
   const bus = new MemoryBus();
   const mailer = new CaptureMailer();
   const noQueues = new NoQueueStats();
-  const app = await buildApp({ config, db, bus, mailer, queues: noQueues, jobs: noQueues }, { docs: false, ...opts });
+  const app = await buildApp(
+    { config, db, bus, mailer, queues: noQueues, jobs: noQueues },
+    { docs: false, ...opts },
+  );
   await app.ready();
   return {
-    app, db, bus, mailer,
+    app,
+    db,
+    bus,
+    mailer,
     close: async () => {
       await app.close();
       await db.close();
@@ -61,13 +72,21 @@ export async function setPlatformSetting(key: string, value: unknown): Promise<v
 /** HTTP-клиент с cookie и автоматической подстановкой CSRF-токена, как у браузера. */
 export class Client {
   cookies = new Map<string, string>();
-  constructor(private app: FastifyInstance, private origin = 'http://localhost:3000') {}
+  constructor(
+    private app: FastifyInstance,
+    private origin = 'http://localhost:3000',
+  ) {}
 
   get csrf(): string | undefined {
     return this.cookies.get('mr_csrf');
   }
 
-  async request(method: InjectOptions['method'], url: string, body?: unknown, extra: { csrf?: boolean; headers?: Record<string, string> } = {}): Promise<LightMyRequestResponse & { json<T = any>(): T }> {
+  async request(
+    method: InjectOptions['method'],
+    url: string,
+    body?: unknown,
+    extra: { csrf?: boolean; headers?: Record<string, string> } = {},
+  ): Promise<LightMyRequestResponse & { json<T = any>(): T }> {
     const headers: Record<string, string> = { ...(extra.headers ?? {}) };
     if (this.cookies.size) headers.cookie = [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; ');
     const unsafe = !['GET', 'HEAD', 'OPTIONS'].includes(String(method));
@@ -83,7 +102,8 @@ export class Client {
     return res as never;
   }
   get = (url: string) => this.request('GET', url);
-  post = (url: string, body?: unknown, extra?: { csrf?: boolean; headers?: Record<string, string> }) => this.request('POST', url, body ?? {}, extra);
+  post = (url: string, body?: unknown, extra?: { csrf?: boolean; headers?: Record<string, string> }) =>
+    this.request('POST', url, body ?? {}, extra);
   put = (url: string, body?: unknown) => this.request('PUT', url, body ?? {});
   patch = (url: string, body?: unknown) => this.request('PATCH', url, body ?? {});
   delete = (url: string) => this.request('DELETE', url);
@@ -99,9 +119,17 @@ export class Client {
  * Вход пользователя. Многотенантные пользователи при входе попадают в тенант, где работали последним (так же ведёт себя продукт),
  * поэтому тесты явно выбирают рабочий тенант (по умолчанию «Алтайский край»), если он доступен пользователю.
  */
-export async function loginAs(ctx: TestCtx, email: string, password = PASSWORD, tenantSlug = 'altai-krai'): Promise<Client> {
+export async function loginAs(
+  ctx: TestCtx,
+  email: string,
+  password = PASSWORD,
+  tenantSlug = 'altai-krai',
+): Promise<Client> {
   const c = await new Client(ctx.app).login(email, password);
-  const me = (await c.get('/v1/auth/me')).json<{ tenant: { slug: string } | null; tenants: Array<{ id: string; slug: string }> }>();
+  const me = (await c.get('/v1/auth/me')).json<{
+    tenant: { slug: string } | null;
+    tenants: Array<{ id: string; slug: string }>;
+  }>();
   const want = me.tenants.find((t) => t.slug === tenantSlug);
   if (want && me.tenant?.slug !== tenantSlug) await c.post('/v1/auth/switch-tenant', { tenantId: want.id });
   return c;
@@ -110,6 +138,9 @@ export async function loginAs(ctx: TestCtx, email: string, password = PASSWORD, 
 export async function tenantIds(): Promise<{ A: string; B: string }> {
   return withAdmin(async (c) => {
     const r = await c.query<{ slug: string; id: string }>('SELECT slug, id FROM tenants');
-    return { A: r.rows.find((x) => x.slug === 'altai-krai')!.id, B: r.rows.find((x) => x.slug === 'demo-republic')!.id };
+    return {
+      A: r.rows.find((x) => x.slug === 'altai-krai')!.id,
+      B: r.rows.find((x) => x.slug === 'demo-republic')!.id,
+    };
   });
 }

@@ -16,7 +16,11 @@ afterAll(() => ctx.close());
 
 const cookieOf = (c: Client) => [...c.cookies].map(([k, v]) => `${k}=${v}`).join('; ');
 
-interface Conn { ws: WebSocket; messages: Array<{ type: string; data?: { title?: string } }>; closed: Promise<number> }
+interface Conn {
+  ws: WebSocket;
+  messages: Array<{ type: string; data?: { title?: string } }>;
+  closed: Promise<number>;
+}
 function connect(c: Client | null, origin: string | null = 'http://localhost:3000'): Promise<Conn> {
   return new Promise((resolve, reject) => {
     const headers: Record<string, string> = {};
@@ -27,7 +31,9 @@ function connect(c: Client | null, origin: string | null = 'http://localhost:300
     const closed = new Promise<number>((r) => ws.on('close', (code) => r(code)));
     ws.on('message', (m) => messages.push(JSON.parse(m.toString())));
     ws.once('open', () => setTimeout(() => resolve({ ws, messages, closed }), 100)); // hello приходит сразу после подписки
-    ws.once('unexpected-response', (_req, res) => reject(Object.assign(new Error(`HTTP ${res.statusCode}`), { status: res.statusCode })));
+    ws.once('unexpected-response', (_req, res) =>
+      reject(Object.assign(new Error(`HTTP ${res.statusCode}`), { status: res.statusCode })),
+    );
     ws.once('error', () => {});
   });
 }
@@ -71,7 +77,10 @@ describe('WebSocket: поток материалов в реальном вре�
     for (let i = 0; i < 5; i++) conns.push(await connect(owner));
     const sixth = await connect(owner);
     expect(await sixth.closed).toBe(1008);
-    for (const c of conns) { c.ws.close(); await c.closed; }
+    for (const c of conns) {
+      c.ws.close();
+      await c.closed;
+    }
   });
 
   it('после выхода из системы новое подключение невозможно', async () => {

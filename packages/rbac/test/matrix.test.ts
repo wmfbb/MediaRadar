@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { TENANT_ROLE_KEYS, type TenantRoleKey } from '@mediaradar/core';
-import { PLATFORM_ROLE_PERMISSIONS, TENANT_PERMISSIONS, TENANT_ROLE_PERMISSIONS, can, permissionsOf, requiresMfa } from '../src';
+import {
+  PLATFORM_ROLE_PERMISSIONS,
+  TENANT_PERMISSIONS,
+  TENANT_ROLE_PERMISSIONS,
+  can,
+  permissionsOf,
+  requiresMfa,
+} from '../src';
 
 /**
  * Матрица из docs/PRODUCT_SPEC.md §8.2: ● полный, ◐ ограниченный, — нет.
@@ -58,7 +65,10 @@ describe('матрица ролей (PRODUCT_SPEC §8.2)', () => {
 
   it('OWNER имеет все разрешения тенанта; ни одна роль не имеет платформенных', () => {
     expect(new Set(TENANT_ROLE_PERMISSIONS.OWNER)).toEqual(new Set(TENANT_PERMISSIONS));
-    for (const r of TENANT_ROLE_KEYS) expect([...permissionsOf({ tenantRole: r, platformRole: null })].some((p) => p.startsWith('platform:'))).toBe(false);
+    for (const r of TENANT_ROLE_KEYS)
+      expect(
+        [...permissionsOf({ tenantRole: r, platformRole: null })].some((p) => p.startsWith('platform:')),
+      ).toBe(false);
   });
 
   it('иерархия: права VIEWER ⊂ ANALYST ⊂ ADMIN ⊂ OWNER (кроме модерации у EDITOR/MODERATOR)', () => {

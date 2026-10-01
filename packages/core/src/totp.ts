@@ -46,13 +46,16 @@ export function hotp(secret: Buffer, counter: number, digits = 6, algo: Algo = '
   msg.writeBigUInt64BE(BigInt(counter));
   const h = createHmac(algo, secret).update(msg).digest();
   const offset = h[h.length - 1]! & 0x0f;
-  const bin =
-    ((h[offset]! & 0x7f) << 24) | (h[offset + 1]! << 16) | (h[offset + 2]! << 8) | h[offset + 3]!;
+  const bin = ((h[offset]! & 0x7f) << 24) | (h[offset + 1]! << 16) | (h[offset + 2]! << 8) | h[offset + 3]!;
   return String(bin % 10 ** digits).padStart(digits, '0');
 }
 
 /** TOTP (RFC 6238) */
-export function totp(secret: Buffer, timeMs: number, opts: { step?: number; digits?: number; algo?: Algo } = {}): string {
+export function totp(
+  secret: Buffer,
+  timeMs: number,
+  opts: { step?: number; digits?: number; algo?: Algo } = {},
+): string {
   const { step = 30, digits = 6, algo = 'sha1' } = opts;
   return hotp(secret, Math.floor(timeMs / 1000 / step), digits, algo);
 }
@@ -64,7 +67,13 @@ export function totp(secret: Buffer, timeMs: number, opts: { step?: number; digi
 export function verifyTotp(
   secretBase32: string,
   code: string,
-  opts: { timeMs?: number; window?: number; step?: number; digits?: number; lastCounter?: number | null } = {},
+  opts: {
+    timeMs?: number;
+    window?: number;
+    step?: number;
+    digits?: number;
+    lastCounter?: number | null;
+  } = {},
 ): number | null {
   const { timeMs = Date.now(), window = 1, step = 30, digits = 6, lastCounter = null } = opts;
   if (!new RegExp(`^\\d{${digits}}$`).test(code)) return null;
@@ -80,7 +89,13 @@ export function verifyTotp(
 
 export function otpauthUrl(opts: { secret: string; account: string; issuer: string }): string {
   const label = encodeURIComponent(`${opts.issuer}:${opts.account}`);
-  const q = new URLSearchParams({ secret: opts.secret, issuer: opts.issuer, algorithm: 'SHA1', digits: '6', period: '30' });
+  const q = new URLSearchParams({
+    secret: opts.secret,
+    issuer: opts.issuer,
+    algorithm: 'SHA1',
+    digits: '6',
+    period: '30',
+  });
   return `otpauth://totp/${label}?${q.toString()}`;
 }
 

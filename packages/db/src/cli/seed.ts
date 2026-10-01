@@ -23,9 +23,14 @@ try {
     await resetDemo(client);
   }
   const s = await seedDemo(client);
-  console.log(`Готово: тенантов ${Object.keys(s.tenants).length}, источников ${s.sources}, материалов ${s.articles}`);
+  console.log(
+    `Готово: тенантов ${Object.keys(s.tenants).length}, источников ${s.sources}, материалов ${s.articles}`,
+  );
   console.log(`\nДемо-аккаунты (пароль для всех: ${DEMO_PASSWORD}):`);
-  for (const a of DEMO_ACCOUNTS) console.log(`  ${a.email.padEnd(30)} ${(a.platformRole ?? a.role ?? '').padEnd(12)} ${a.tenant ?? 'платформа'}`);
+  for (const a of DEMO_ACCOUNTS)
+    console.log(
+      `  ${a.email.padEnd(30)} ${(a.platformRole ?? a.role ?? '').padEnd(12)} ${a.tenant ?? 'платформа'}`,
+    );
 } finally {
   await client.end();
 }

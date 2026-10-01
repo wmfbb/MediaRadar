@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Client} from './helpers';
+import type { Client } from './helpers';
 import { createTestApp, loginAs, tenantIds, withAdmin, type TestCtx } from './helpers';
 
 let ctx: TestCtx;
@@ -14,12 +14,34 @@ afterAll(() => ctx.close());
 
 /** Независимый подсчёт видимых тенанту материалов напрямую в БД (от имени владельца БД, без RLS). */
 const countVisible = (tenantId: string, extraWhere = '', params: unknown[] = []) =>
-  withAdmin(async (c) => (await c.query<{ n: number }>(
-    `SELECT count(*)::int AS n FROM articles a JOIN sources s ON s.id = a.source_id LEFT JOIN topics t ON t.id = a.topic_id LEFT JOIN geo_places g ON g.id = a.geo_id
-      WHERE a.status = 'published' AND ((a.visibility_tenant_id IS NULL AND a.source_id IN (SELECT source_id FROM tenant_sources WHERE tenant_id = $1 AND enabled)) OR a.visibility_tenant_id = $1) ${extraWhere}`, [tenantId, ...params])).rows[0]!.n);
+  withAdmin(
+    async (c) =>
+      (
+        await c.query<{ n: number }>(
+          `SELECT count(*)::int AS n FROM articles a JOIN sources s ON s.id = a.source_id LEFT JOIN topics t ON t.id = a.topic_id LEFT JOIN geo_places g ON g.id = a.geo_id
+      WHERE a.status = 'published' AND ((a.visibility_tenant_id IS NULL AND a.source_id IN (SELECT source_id FROM tenant_sources WHERE tenant_id = $1 AND enabled)) OR a.visibility_tenant_id = $1) ${extraWhere}`,
+          [tenantId, ...params],
+        )
+      ).rows[0]!.n,
+  );
 
-interface Item { id: string; title: string; lead: string | null; publishedAt: string; sentiment: { label: string; score: number } | null; source: { id: string; name: string; kind: string }; topic: { key: string } | null; persons: string[]; policy: string }
-interface Page { items: Item[]; total: number; nextCursor: string | null; nextOffset: number | null }
+interface Item {
+  id: string;
+  title: string;
+  lead: string | null;
+  publishedAt: string;
+  sentiment: { label: string; score: number } | null;
+  source: { id: string; name: string; kind: string };
+  topic: { key: string } | null;
+  persons: string[];
+  policy: string;
+}
+interface Page {
+  items: Item[];
+  total: number;
+  nextCursor: string | null;
+  nextOffset: number | null;
+}
 const list = async (c: Client, qs = ''): Promise<Page> => (await c.get(`/v1/articles?${qs}`)).json();
 
 describe('лента: список и пагинация', () => {
@@ -65,7 +87,10 @@ describe('лента: список и пагинация', () => {
     const src = await list(owner, 'sort=src&limit=50');
     const names = src.items.map((i) => i.source.name);
     const closed = new Set<string>();
-    names.forEach((n, i) => { if (i && n !== names[i - 1]) closed.add(names[i - 1]!); expect(closed.has(n), `источник «${n}» разорван`).toBe(false); });
+    names.forEach((n, i) => {
+      if (i && n !== names[i - 1]) closed.add(names[i - 1]!);
+      expect(closed.has(n), `источник «${n}» разорван`).toBe(false);
+    });
   });
 
   it('некорректные параметры отклоняются', async () => {
@@ -84,7 +109,12 @@ describe('лента: фильтры, поиск, фасеты', () => {
     const fuel = await list(owner, 'topics=fuel&limit=50');
     expect(fuel.items.every((i) => i.topic?.key === 'fuel')).toBe(true);
     const combo = await list(owner, 'topics=fuel&sentiment=NG,VN&kinds=NEWS_SITE,GOV_PORTAL');
-    expect(combo.total).toBe(await countVisible(tenants.A, "AND t.key = 'fuel' AND a.sentiment_label IN ('NG','VN') AND s.kind IN ('NEWS_SITE','GOV_PORTAL')"));
+    expect(combo.total).toBe(
+      await countVisible(
+        tenants.A,
+        "AND t.key = 'fuel' AND a.sentiment_label IN ('NG','VN') AND s.kind IN ('NEWS_SITE','GOV_PORTAL')",
+      ),
+    );
     const tg = await list(owner, 'kinds=TELEGRAM&limit=50');
     expect(tg.items.every((i) => i.source.kind === 'TELEGRAM')).toBe(true);
     const range = await list(owner, `from=${new Date(Date.now() - 3 * 864e5).toISOString()}&limit=50`);
@@ -93,7 +123,9 @@ describe('лента: фильтры, поиск, фасеты', () => {
 
   it('поиск учитывает морфологию, ищет по сущностям и экранирует спецсимволы', async () => {
     // разные словоформы одного слова (стеммер Snowball сам их не объединяет — см. миграцию 0006)
-    const forms = await Promise.all(['урожай', 'урожая', 'урожаю', 'урожае'].map((w) => list(owner, `q=${encodeURIComponent(w)}&limit=50`)));
+    const forms = await Promise.all(
+      ['урожай', 'урожая', 'урожаю', 'урожае'].map((w) => list(owner, `q=${encodeURIComponent(w)}&limit=50`)),
+    );
     for (const [i, page] of forms.entries()) {
       expect(page.total, `форма №${i}`).toBeGreaterThan(0);
       expect(page.items.every((x) => /урожа|урож/i.test(x.title + (x.lead ?? '')))).toBe(true);
@@ -103,7 +135,9 @@ describe('лента: фильтры, поиск, фасеты', () => {
     expect(city.total).toBeGreaterThan(0);
     const person = await list(owner, `q=${encodeURIComponent('Соколов')}&limit=50`);
     expect(person.total).toBeGreaterThan(0);
-    expect(person.items.every((i) => i.persons.some((p) => /Соколов/.test(p)) || /Соколов/.test(i.title))).toBe(true);
+    expect(
+      person.items.every((i) => i.persons.some((p) => /Соколов/.test(p)) || /Соколов/.test(i.title)),
+    ).toBe(true);
     const all = await list(owner, 'limit=1');
     const percent = await list(owner, `q=${encodeURIComponent('%')}&limit=50`);
     expect(percent.total).toBeLessThan(all.total);
@@ -145,15 +179,21 @@ describe('политика контента', () => {
 
   it('настройки тенанта меняют выдачу: metadata убирает лид и тело, maxChars усекает лид; сброс возвращает умолчание', async () => {
     const id = (await firstOf('GOV_PORTAL')).id;
-    const put = (key: string, value: unknown) => owner.put(`/v1/settings/${key}`, { scope: 'tenant', scopeId: tenants.A, value });
+    const put = (key: string, value: unknown) =>
+      owner.put(`/v1/settings/${key}`, { scope: 'tenant', scopeId: tenants.A, value });
     try {
       expect((await put('content.policy.override', 'metadata')).statusCode).toBe(200);
       const d = await detail(owner, id);
       expect(d.policy).toBe('metadata');
       expect(d.body).toBeNull();
       expect(d.lead).toBeNull();
-      expect((await list(owner, 'limit=5')).items.every((i) => i.lead === null && i.policy === 'metadata')).toBe(true);
-      expect((await owner.delete(`/v1/settings/content.policy.override?scope=tenant&scopeId=${tenants.A}`)).statusCode).toBe(200);
+      expect(
+        (await list(owner, 'limit=5')).items.every((i) => i.lead === null && i.policy === 'metadata'),
+      ).toBe(true);
+      expect(
+        (await owner.delete(`/v1/settings/content.policy.override?scope=tenant&scopeId=${tenants.A}`))
+          .statusCode,
+      ).toBe(200);
       expect((await detail(owner, id)).policy).toBe('full');
       expect((await put('content.excerpt.maxChars', 100)).statusCode).toBe(200);
       const news = await detail(owner, (await firstOf('NEWS_SITE')).id);
@@ -177,7 +217,12 @@ describe('ограничение области доступа (ABAC) и изо�
     const gov = (await list(owner, 'topics=gov&limit=1')).items[0]!;
     expect((await irina.get(`/v1/articles/${gov.id}`)).statusCode).toBe(404);
     const facets = (await irina.get('/v1/articles/facets')).json();
-    expect(facets.topics.filter((t: { count: number }) => t.count > 0).map((t: { key: string }) => t.key).sort()).toEqual(['agro', 'food']);
+    expect(
+      facets.topics
+        .filter((t: { count: number }) => t.count > 0)
+        .map((t: { key: string }) => t.key)
+        .sort(),
+    ).toEqual(['agro', 'food']);
   });
 
   it('тенант видит только свои источники и материалы; чужие материалы по ID — 404', async () => {
@@ -185,16 +230,37 @@ describe('ограничение области доступа (ABAC) и изо�
     await maria.post('/v1/auth/switch-tenant', { tenantId: tenants.B });
     const pageB = await list(maria, 'limit=50');
     expect(pageB.total).toBe(await countVisible(tenants.B));
-    const allowed = await withAdmin(async (c) => new Set((await c.query<{ source_id: string }>('SELECT source_id FROM tenant_sources WHERE tenant_id = $1', [tenants.B])).rows.map((r) => r.source_id)));
-    const privateSource = await withAdmin(async (c) => (await c.query<{ id: string }>("SELECT id FROM sources WHERE owner_tenant_id = $1", [tenants.B])).rows[0]!.id);
-    for (const it of pageB.items) expect(allowed.has(it.source.id) || it.source.id === privateSource).toBe(true);
-    const aOnly = (await list(owner, 'kinds=NEWS_SITE&limit=50')).items.find((i) => !allowed.has(i.source.id))!;
+    const allowed = await withAdmin(
+      async (c) =>
+        new Set(
+          (
+            await c.query<{ source_id: string }>(
+              'SELECT source_id FROM tenant_sources WHERE tenant_id = $1',
+              [tenants.B],
+            )
+          ).rows.map((r) => r.source_id),
+        ),
+    );
+    const privateSource = await withAdmin(
+      async (c) =>
+        (await c.query<{ id: string }>('SELECT id FROM sources WHERE owner_tenant_id = $1', [tenants.B]))
+          .rows[0]!.id,
+    );
+    for (const it of pageB.items)
+      expect(allowed.has(it.source.id) || it.source.id === privateSource).toBe(true);
+    const aOnly = (await list(owner, 'kinds=NEWS_SITE&limit=50')).items.find(
+      (i) => !allowed.has(i.source.id),
+    )!;
     expect((await maria.get(`/v1/articles/${aOnly.id}`)).statusCode).toBe(404);
   });
 
   it('приватные материалы тенанта B видны ему и недоступны тенанту A', async () => {
     const ownerB = await loginAs(ctx, 'owner@altai-republic.demo');
-    const privSrc = await withAdmin(async (c) => (await c.query<{ id: string }>("SELECT id FROM sources WHERE owner_tenant_id = $1", [tenants.B])).rows[0]!.id);
+    const privSrc = await withAdmin(
+      async (c) =>
+        (await c.query<{ id: string }>('SELECT id FROM sources WHERE owner_tenant_id = $1', [tenants.B]))
+          .rows[0]!.id,
+    );
     const b = await list(ownerB, `sources=${privSrc}&limit=50`);
     expect(b.total).toBeGreaterThan(0);
     const a = await list(owner, `sources=${privSrc}&limit=50`);
@@ -210,8 +276,15 @@ describe('сохранённые фильтры', () => {
     const moderator = await loginAs(ctx, 'o.timoshina@altai.media');
     const filter = { topics: ['fuel'], sentiment: ['NG'] };
     expect((await viewer.post('/v1/saved-filters', { name: 'Личный (тест)', filter })).statusCode).toBe(201);
-    expect((await viewer.post('/v1/saved-filters', { name: 'Командный (тест)', filter, visibility: 'team' })).statusCode).toBe(403);
-    const team = await analyst.post('/v1/saved-filters', { name: 'Командный (тест)', filter, visibility: 'team' });
+    expect(
+      (await viewer.post('/v1/saved-filters', { name: 'Командный (тест)', filter, visibility: 'team' }))
+        .statusCode,
+    ).toBe(403);
+    const team = await analyst.post('/v1/saved-filters', {
+      name: 'Командный (тест)',
+      filter,
+      visibility: 'team',
+    });
     expect(team.statusCode).toBe(201);
     const seen = (await moderator.get('/v1/saved-filters')).json().items.map((x: { name: string }) => x.name);
     expect(seen).toContain('Командный (тест)');

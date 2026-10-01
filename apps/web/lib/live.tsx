@@ -2,12 +2,19 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 export interface LiveArticle {
-  id: string; title: string; publishedAt: string; topic: string; geo: string | null;
+  id: string;
+  title: string;
+  publishedAt: string;
+  topic: string;
+  geo: string | null;
   source: { id: string; name: string; domain: string; kind: string };
   sentiment: { label: 'VP' | 'P' | 'N' | 'NG' | 'VN'; score: number };
 }
 type Status = 'connecting' | 'live' | 'offline';
-interface LiveValue { status: Status; subscribe: (fn: (a: LiveArticle) => void) => () => void }
+interface LiveValue {
+  status: Status;
+  subscribe: (fn: (a: LiveArticle) => void) => () => void;
+}
 const Ctx = createContext<LiveValue>({ status: 'offline', subscribe: () => () => {} });
 export const useLive = () => useContext(Ctx);
 
@@ -51,7 +58,10 @@ export function LiveProvider({ children, tenantId }: { children: ReactNode; tena
     };
   }, [tenantId]);
 
-  const value = useRef<LiveValue>({ status, subscribe: (fn) => (handlers.current.add(fn), () => void handlers.current.delete(fn)) });
+  const value = useRef<LiveValue>({
+    status,
+    subscribe: (fn) => (handlers.current.add(fn), () => void handlers.current.delete(fn)),
+  });
   value.current = { ...value.current, status };
   return <Ctx.Provider value={{ status, subscribe: value.current.subscribe }}>{children}</Ctx.Provider>;
 }

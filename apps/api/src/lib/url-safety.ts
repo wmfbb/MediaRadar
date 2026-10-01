@@ -1,11 +1,25 @@
 import { isIP } from 'node:net';
 import { AppError } from '@mediaradar/core';
 
-const BLOCKED_HOSTS = new Set(['localhost', 'localhost.localdomain', 'ip6-localhost', 'metadata.google.internal']);
+const BLOCKED_HOSTS = new Set([
+  'localhost',
+  'localhost.localdomain',
+  'ip6-localhost',
+  'metadata.google.internal',
+]);
 
 function ipv4Private(ip: string): boolean {
   const [a, b] = ip.split('.').map(Number) as [number, number];
-  return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a >= 224;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    a >= 224
+  );
 }
 /** Разворачивает IPv6 в 8 шестнадцатеричных групп (учитывает «::» и хвост в виде IPv4). */
 function expandIPv6(ip: string): number[] | null {
@@ -21,8 +35,12 @@ function expandIPv6(ip: string): number[] | null {
   const t = tail !== undefined && tail ? tail.split(':') : [];
   const missing = 8 - h.length - t.length;
   if ((tail === undefined && missing !== 0) || missing < 0) return null;
-  const groups = [...h, ...Array.from({ length: tail === undefined ? 0 : missing }, () => '0'), ...t].map((g) => parseInt(g, 16));
-  return groups.length === 8 && groups.every((g) => Number.isInteger(g) && g >= 0 && g <= 0xffff) ? groups : null;
+  const groups = [...h, ...Array.from({ length: tail === undefined ? 0 : missing }, () => '0'), ...t].map(
+    (g) => parseInt(g, 16),
+  );
+  return groups.length === 8 && groups.every((g) => Number.isInteger(g) && g >= 0 && g <= 0xffff)
+    ? groups
+    : null;
 }
 
 const v4From = (hi: number, lo: number) => `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
@@ -30,7 +48,16 @@ const v4From = (hi: number, lo: number) => `${hi >> 8}.${hi & 255}.${lo >> 8}.${
 function ipv6Private(ip: string): boolean {
   const g = expandIPv6(ip);
   if (!g) return true; // не удалось разобрать — считаем небезопасным
-  const [g0, g1, g2, g3, g4, g5, g6, g7] = g as [number, number, number, number, number, number, number, number];
+  const [g0, g1, g2, g3, g4, g5, g6, g7] = g as [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+  ];
   if (g.every((x) => x === 0) || (g.slice(0, 7).every((x) => x === 0) && g7 === 1)) return true; // :: и ::1
   if ((g0 & 0xffc0) === 0xfe80) return true; // link-local fe80::/10
   if ((g0 & 0xfe00) === 0xfc00) return true; // unique local fc00::/7
@@ -58,7 +85,9 @@ export function assertPublicHttpUrl(raw: string): URL {
   try {
     u = new URL(raw);
   } catch {
-    throw new AppError('validation_failed', 'Некорректный адрес', [{ path: 'url', message: 'Укажите полный адрес, например https://example.ru' }]);
+    throw new AppError('validation_failed', 'Некорректный адрес', [
+      { path: 'url', message: 'Укажите полный адрес, например https://example.ru' },
+    ]);
   }
   const fail = (message: string): never => {
     throw new AppError('validation_failed', message, [{ path: 'url', message }]);
@@ -66,7 +95,13 @@ export function assertPublicHttpUrl(raw: string): URL {
   if (u.protocol !== 'http:' && u.protocol !== 'https:') fail('Допустимы только адреса http:// и https://');
   if (u.username || u.password) fail('Адрес не должен содержать логин и пароль');
   const host = u.hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  if (BLOCKED_HOSTS.has(host) || host.endsWith('.localhost') || host.endsWith('.internal') || host.endsWith('.local')) fail('Этот адрес недопустим');
+  if (
+    BLOCKED_HOSTS.has(host) ||
+    host.endsWith('.localhost') ||
+    host.endsWith('.internal') ||
+    host.endsWith('.local')
+  )
+    fail('Этот адрес недопустим');
   if (isIP(host) && isPrivateAddress(host)) fail('Адреса внутренней сети недопустимы');
   if (!host.includes('.') && !isIP(host)) fail('Укажите доменное имя сайта');
   return u;

@@ -4,12 +4,21 @@ import { TENANT_ROLE_PERMISSIONS, type Permission } from '@mediaradar/rbac';
 import { Client, createTestApp, loginAs, type TestCtx } from './helpers';
 
 const USERS: Record<TenantRoleKey, string> = {
-  OWNER: 'a.prokhorov@altai.media', ADMIN: 'n.sergeeva@altai.media', ANALYST: 'm.kovaleva@altai.media',
-  EDITOR: 'd.esin@altai.media', MODERATOR: 'o.timoshina@altai.media', VIEWER: 'i.lapteva@agro22.ru',
+  OWNER: 'a.prokhorov@altai.media',
+  ADMIN: 'n.sergeeva@altai.media',
+  ANALYST: 'm.kovaleva@altai.media',
+  EDITOR: 'd.esin@altai.media',
+  MODERATOR: 'o.timoshina@altai.media',
+  VIEWER: 'i.lapteva@agro22.ru',
 };
 
 /** Каждая строка: эндпоинт → разрешение, которое он обязан требовать (достаточно любого из перечисленных). */
-const ENDPOINTS: Array<{ method: 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'PUT'; url: string; perms: Permission[]; body?: object }> = [
+const ENDPOINTS: Array<{
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'PUT';
+  url: string;
+  perms: Permission[];
+  body?: object;
+}> = [
   { method: 'GET', url: '/v1/tenant', perms: ['tenant:read'] },
   { method: 'GET', url: '/v1/articles', perms: ['feed:read'] },
   { method: 'GET', url: '/v1/articles/facets', perms: ['feed:read'] },
@@ -49,12 +58,19 @@ describe('эндпоинты требуют ровно те права, что �
   for (const ep of ENDPOINTS) {
     it(`${ep.method} ${ep.url} ← ${ep.perms.join(' | ')}`, async () => {
       for (const role of TENANT_ROLE_KEYS) {
-        const allowed = ep.perms.some((p) => (TENANT_ROLE_PERMISSIONS[role] as readonly string[]).includes(p));
-        const res = await clients.get(role)!.request(ep.method, ep.url, ep.method === 'GET' ? undefined : (ep.body ?? {}));
+        const allowed = ep.perms.some((p) =>
+          (TENANT_ROLE_PERMISSIONS[role] as readonly string[]).includes(p),
+        );
+        const res = await clients
+          .get(role)!
+          .request(ep.method, ep.url, ep.method === 'GET' ? undefined : (ep.body ?? {}));
         if (allowed) expect(res.statusCode, `${role} должен иметь доступ: ${res.body}`).not.toBe(403);
         else expect(res.statusCode, `${role} не должен иметь доступ`).toBe(403);
         expect(res.statusCode).not.toBe(401);
-        expect(res.statusCode === 501 || res.statusCode < 500, `неожиданная ошибка сервера ${res.statusCode}: ${res.body}`).toBe(true);
+        expect(
+          res.statusCode === 501 || res.statusCode < 500,
+          `неожиданная ошибка сервера ${res.statusCode}: ${res.body}`,
+        ).toBe(true);
       }
     });
   }
@@ -70,7 +86,8 @@ describe('эндпоинты требуют ровно те права, что �
   it('платформенные эндпоинты недоступны ролям тенанта, включая владельца', async () => {
     for (const role of TENANT_ROLE_KEYS) {
       const c = clients.get(role)!;
-      for (const url of ['/v1/admin/tenants', '/v1/admin/audit', '/v1/admin/flags']) expect((await c.get(url)).statusCode, `${role} ${url}`).toBe(403);
+      for (const url of ['/v1/admin/tenants', '/v1/admin/audit', '/v1/admin/flags'])
+        expect((await c.get(url)).statusCode, `${role} ${url}`).toBe(403);
       expect((await c.put('/v1/admin/flags/portal.public', { enabled: true })).statusCode).toBe(403);
     }
   });

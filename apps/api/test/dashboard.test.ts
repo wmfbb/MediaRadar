@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Client} from './helpers';
+import type { Client } from './helpers';
 import { createTestApp, loginAs, tenantIds, withAdmin, type TestCtx } from './helpers';
 
 let ctx: TestCtx;
@@ -19,14 +19,25 @@ interface Dash {
   topSources: Array<{ name: string; count: number }>;
   geo: { places: Array<{ name: string; count: number }>; total: number };
   persons: { top: Array<{ name: string; count: number }>; total: number };
-  health: { parsers: Array<{ parser: string; sources: number; errors: number }>; sources: { active: number; errors: number; paused: number }; queue: { available: boolean } };
+  health: {
+    parsers: Array<{ parser: string; sources: number; errors: number }>;
+    sources: { active: number; errors: number; paused: number };
+    queue: { available: boolean };
+  };
 }
 
 const inRange = (days: number) =>
-  withAdmin(async (c) => (await c.query<{ n: number; neg: number; withSent: number }>(
-    `SELECT count(*)::int AS n, count(*) FILTER (WHERE sentiment_label IN ('NG','VN'))::int AS neg, count(*) FILTER (WHERE sentiment_label IS NOT NULL)::int AS "withSent"
+  withAdmin(
+    async (c) =>
+      (
+        await c.query<{ n: number; neg: number; withSent: number }>(
+          `SELECT count(*)::int AS n, count(*) FILTER (WHERE sentiment_label IN ('NG','VN'))::int AS neg, count(*) FILTER (WHERE sentiment_label IS NOT NULL)::int AS "withSent"
        FROM articles a WHERE a.status = 'published' AND a.published_at >= now() - make_interval(days => $1)
-        AND ((a.visibility_tenant_id IS NULL AND a.source_id IN (SELECT source_id FROM tenant_sources WHERE tenant_id = $2 AND enabled)) OR a.visibility_tenant_id = $2)`, [days, tenants.A])).rows[0]!);
+        AND ((a.visibility_tenant_id IS NULL AND a.source_id IN (SELECT source_id FROM tenant_sources WHERE tenant_id = $2 AND enabled)) OR a.visibility_tenant_id = $2)`,
+          [days, tenants.A],
+        )
+      ).rows[0]!,
+  );
 
 describe('дашборд', () => {
   it('KPI и тональность совпадают с независимым подсчётом по БД', async () => {
@@ -68,7 +79,9 @@ describe('дашборд', () => {
     expect(d.persons.top.length).toBeGreaterThan(0);
     expect(d.persons.top.length).toBeLessThanOrEqual(7);
     // состояние парсеров согласовано с реестром источников (число может расти, если другие тесты добавили приватные источники)
-    const registry = (await owner.get('/v1/sources')).json<{ items: Array<{ enabled: boolean; status: string }> }>().items.filter((s) => s.enabled);
+    const registry = (await owner.get('/v1/sources'))
+      .json<{ items: Array<{ enabled: boolean; status: string }> }>()
+      .items.filter((s) => s.enabled);
     expect(d.health.parsers.reduce((s, p) => s + p.sources, 0)).toBe(registry.length);
     expect(d.health.sources.errors).toBe(registry.filter((s) => s.status === 'error').length);
     expect(d.health.sources.errors).toBeGreaterThanOrEqual(1); // biysk22.ru в демо-данных — с ошибкой
@@ -97,7 +110,11 @@ describe('аналитика', () => {
     kpis: { articles: number; avgSentiment: number | null; uniquePersons: number; critical: number };
     sentimentIndex: Array<{ date: string; score: number; average: number }>;
     sourceComparison: Array<{ id: string; count: number; negativeShare: number; trust: number }>;
-    heatmap: { rows: Array<{ key: string }>; cols: Array<{ id: string }>; cells: Array<{ topic: string; sourceId: string; count: number }> };
+    heatmap: {
+      rows: Array<{ key: string }>;
+      cols: Array<{ id: string }>;
+      cells: Array<{ topic: string; sourceId: string; count: number }>;
+    };
     hours: number[];
     words: Array<{ word: string; count: number }>;
     insights: Array<{ kind: string; title: string; text: string }>;
@@ -110,13 +127,22 @@ describe('аналитика', () => {
     expect(a.kpis.avgSentiment).toBeLessThan(1);
     expect(a.kpis.uniquePersons).toBeGreaterThan(0);
     expect(a.sentimentIndex.length).toBeGreaterThan(10);
-    for (const p of a.sentimentIndex) { expect(p.score).toBeGreaterThanOrEqual(-1); expect(p.score).toBeLessThanOrEqual(1); expect(p.average).toBeGreaterThanOrEqual(-1); }
+    for (const p of a.sentimentIndex) {
+      expect(p.score).toBeGreaterThanOrEqual(-1);
+      expect(p.score).toBeLessThanOrEqual(1);
+      expect(p.average).toBeGreaterThanOrEqual(-1);
+    }
     expect(a.sourceComparison.length).toBeGreaterThan(3);
-    for (const s of a.sourceComparison) { expect(s.negativeShare).toBeGreaterThanOrEqual(0); expect(s.negativeShare).toBeLessThanOrEqual(100); }
+    for (const s of a.sourceComparison) {
+      expect(s.negativeShare).toBeGreaterThanOrEqual(0);
+      expect(s.negativeShare).toBeLessThanOrEqual(100);
+    }
     expect(a.hours).toHaveLength(24);
     expect(a.hours.reduce((s, x) => s + x, 0)).toBe(a.kpis.articles);
     // рабочие часы по Барнаулу (UTC+7) активнее ночных
-    expect(a.hours.slice(8, 15).reduce((s, x) => s + x, 0)).toBeGreaterThan(a.hours.slice(0, 5).reduce((s, x) => s + x, 0));
+    expect(a.hours.slice(8, 15).reduce((s, x) => s + x, 0)).toBeGreaterThan(
+      a.hours.slice(0, 5).reduce((s, x) => s + x, 0),
+    );
     expect(a.words.length).toBeGreaterThan(10);
     expect(a.words.every((w) => w.word.length >= 4)).toBe(true);
     const counts = a.words.map((w) => w.count);
@@ -130,6 +156,9 @@ describe('аналитика', () => {
     const colIds = new Set(a.heatmap.cols.map((c) => c.id));
     expect(a.heatmap.cells.every((c) => colIds.has(c.sourceId) && c.count > 0)).toBe(true);
     expect(a.insights.length).toBeGreaterThan(0);
-    for (const i of a.insights) { expect(i.title.length).toBeGreaterThan(5); expect(i.text).toMatch(/\d/); }
+    for (const i of a.insights) {
+      expect(i.title.length).toBeGreaterThan(5);
+      expect(i.text).toMatch(/\d/);
+    }
   });
 });

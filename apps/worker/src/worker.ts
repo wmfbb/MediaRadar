@@ -26,21 +26,32 @@ export async function startWorker(opts: WorkerOptions): Promise<RunningWorker> {
   const db = createDb(opts.databaseUrl, { max: 5, applicationName: 'mediaradar-worker' });
   const pub = new Redis(opts.redisUrl, { maxRetriesPerRequest: 2 });
   pub.on('error', () => {});
-  const bus = { publish: (channel: string, payload: unknown) => pub.publish(channel, JSON.stringify(payload)) };
+  const bus = {
+    publish: (channel: string, payload: unknown) => pub.publish(channel, JSON.stringify(payload)),
+  };
 
   const workers = [
     new Worker(QUEUES.collect, (job) => handleCollect(job.data, log), { connection, concurrency: 2 }),
-    new Worker(QUEUES.demoLive, () => handleDemoLive((fn) => db.raw(fn), bus, log), { connection, concurrency: 1 }),
+    new Worker(QUEUES.demoLive, () => handleDemoLive((fn) => db.raw(fn), bus, log), {
+      connection,
+      concurrency: 1,
+    }),
   ];
   for (const w of workers) {
-    w.on('failed', (job, err) => log.error({ queue: w.name, jobId: job?.id, err: err.message }, 'задание завершилось ошибкой'));
+    w.on('failed', (job, err) =>
+      log.error({ queue: w.name, jobId: job?.id, err: err.message }, 'задание завершилось ошибкой'),
+    );
     w.on('error', (err) => log.error({ queue: w.name, err: err.message }, 'ошибка воркера'));
   }
 
   const demoQueue = new Queue(QUEUES.demoLive, { connection });
   demoQueue.on('error', () => {});
   if (opts.demoLive) {
-    await demoQueue.upsertJobScheduler('demo-live-stream', { every: opts.demoIntervalSec * 1000 }, { name: 'tick', opts: { removeOnComplete: 20, removeOnFail: 50 } });
+    await demoQueue.upsertJobScheduler(
+      'demo-live-stream',
+      { every: opts.demoIntervalSec * 1000 },
+      { name: 'tick', opts: { removeOnComplete: 20, removeOnFail: 50 } },
+    );
     log.info({ everySec: opts.demoIntervalSec }, 'demo-live: имитатор живого потока включён');
   } else {
     await demoQueue.removeJobScheduler('demo-live-stream').catch(() => {});
@@ -51,7 +62,9 @@ export async function startWorker(opts: WorkerOptions): Promise<RunningWorker> {
     server = createServer(async (req, res) => {
       if (req.url !== '/healthz') return void res.writeHead(404).end();
       const ok = (await db.ping()) && pub.status === 'ready';
-      res.writeHead(ok ? 200 : 503, { 'content-type': 'application/json' }).end(JSON.stringify({ status: ok ? 'ok' : 'degraded' }));
+      res
+        .writeHead(ok ? 200 : 503, { 'content-type': 'application/json' })
+        .end(JSON.stringify({ status: ok ? 'ok' : 'degraded' }));
     }).listen(opts.healthPort, '0.0.0.0');
   }
 
@@ -68,7 +81,10 @@ export async function startWorker(opts: WorkerOptions): Promise<RunningWorker> {
 }
 
 export function configFromEnv(logger: Logger): WorkerOptions {
-  const config = loadConfig({ ...process.env, DATABASE_URL: process.env.WORKER_DATABASE_URL ?? process.env.DATABASE_URL });
+  const config = loadConfig({
+    ...process.env,
+    DATABASE_URL: process.env.WORKER_DATABASE_URL ?? process.env.DATABASE_URL,
+  });
   if (!config.REDIS_URL) throw new Error('Для воркера обязателен REDIS_URL');
   return {
     redisUrl: config.REDIS_URL,

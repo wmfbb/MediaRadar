@@ -1,8 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import {
-  AppError, DEV_ENCRYPTION_KEY, base32Decode, base32Encode, checkPasswordPolicy, decryptSecret, encryptSecret,
-  generateRecoveryCodes, hashPassword, hotp, isUuid, loadConfig, parseEncryptionKey, sentimentFromScore,
-  totp, uuidv7, verifyPassword, verifyTotp,
+  AppError,
+  DEV_ENCRYPTION_KEY,
+  base32Decode,
+  base32Encode,
+  checkPasswordPolicy,
+  decryptSecret,
+  encryptSecret,
+  generateRecoveryCodes,
+  hashPassword,
+  hotp,
+  isUuid,
+  loadConfig,
+  parseEncryptionKey,
+  sentimentFromScore,
+  totp,
+  uuidv7,
+  verifyPassword,
+  verifyTotp,
 } from '../src';
 
 describe('uuidv7', () => {
@@ -105,8 +120,12 @@ describe('конфиг', () => {
   it('production запрещает dev-ключ и требует METRICS_TOKEN', () => {
     expect(() => loadConfig({ ...base, NODE_ENV: 'production' })).toThrow(/APP_ENCRYPTION_KEY/);
     const key = Buffer.alloc(32, 7).toString('base64');
-    expect(() => loadConfig({ ...base, NODE_ENV: 'production', APP_ENCRYPTION_KEY: key })).toThrow(/METRICS_TOKEN/);
-    expect(loadConfig({ ...base, NODE_ENV: 'production', APP_ENCRYPTION_KEY: key, METRICS_TOKEN: 't' }).isProd).toBe(true);
+    expect(() => loadConfig({ ...base, NODE_ENV: 'production', APP_ENCRYPTION_KEY: key })).toThrow(
+      /METRICS_TOKEN/,
+    );
+    expect(
+      loadConfig({ ...base, NODE_ENV: 'production', APP_ENCRYPTION_KEY: key, METRICS_TOKEN: 't' }).isProd,
+    ).toBe(true);
   });
   it('ошибка читается по-русски и называет поле', () => {
     expect(() => loadConfig({})).toThrow(/DATABASE_URL/);

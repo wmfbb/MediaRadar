@@ -13,7 +13,15 @@ describe('OpenAPI', () => {
     expect(res.statusCode).toBe(200);
     const spec = res.json();
     expect(spec.openapi).toMatch(/^3\./);
-    expect(Object.keys(spec.paths)).toEqual(expect.arrayContaining(['/v1/auth/login', '/v1/articles', '/v1/dashboard', '/v1/sources', '/v1/settings/{key}']));
+    expect(Object.keys(spec.paths)).toEqual(
+      expect.arrayContaining([
+        '/v1/auth/login',
+        '/v1/articles',
+        '/v1/dashboard',
+        '/v1/sources',
+        '/v1/settings/{key}',
+      ]),
+    );
     expect(spec.paths['/v1/auth/login'].post.requestBody).toBeTruthy();
     expect(spec.components.securitySchemes.session).toMatchObject({ type: 'apiKey', in: 'cookie' });
   });

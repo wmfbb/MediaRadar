@@ -1,6 +1,22 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { base32Decode, decryptSecret, loadConfig, parseEncryptionKey, DEV_ENCRYPTION_KEY, totp } from '@mediaradar/core';
-import { Client, PASSWORD, createTestApp, loginAs, setPlatformSetting, tenantIds, withAdmin, type TestCtx } from './helpers';
+import {
+  base32Decode,
+  decryptSecret,
+  loadConfig,
+  parseEncryptionKey,
+  DEV_ENCRYPTION_KEY,
+  totp,
+} from '@mediaradar/core';
+import {
+  Client,
+  PASSWORD,
+  createTestApp,
+  loginAs,
+  setPlatformSetting,
+  tenantIds,
+  withAdmin,
+  type TestCtx,
+} from './helpers';
 
 let ctx: TestCtx;
 beforeAll(async () => {
@@ -17,7 +33,12 @@ let n = 0;
 async function registerFresh(): Promise<{ client: Client; email: string }> {
   const email = `fresh${Date.now()}${n++}@example.com`;
   const client = new Client(ctx.app);
-  const res = await client.post('/v1/auth/register', { email, password: PASSWORD, name: 'Тест Тестов', workspaceName: 'Тестовое пространство' });
+  const res = await client.post('/v1/auth/register', {
+    email,
+    password: PASSWORD,
+    name: 'Тест Тестов',
+    workspaceName: 'Тестовое пространство',
+  });
   expect(res.statusCode, res.body).toBe(201);
   return { client, email };
 }
@@ -49,8 +70,14 @@ describe('вход и сессия', () => {
 
   it('неверный пароль и несуществующий email дают одинаковый ответ', async () => {
     const c = new Client(ctx.app);
-    const wrong = await c.post('/v1/auth/login', { email: 'a.prokhorov@altai.media', password: 'wrong-password-1' });
-    const unknown = await c.post('/v1/auth/login', { email: 'nobody@example.com', password: 'wrong-password-1' });
+    const wrong = await c.post('/v1/auth/login', {
+      email: 'a.prokhorov@altai.media',
+      password: 'wrong-password-1',
+    });
+    const unknown = await c.post('/v1/auth/login', {
+      email: 'nobody@example.com',
+      password: 'wrong-password-1',
+    });
     expect(wrong.statusCode).toBe(401);
     expect(unknown.statusCode).toBe(401);
     expect(wrong.json().detail).toBe(unknown.json().detail);
@@ -58,7 +85,10 @@ describe('вход и сессия', () => {
   });
 
   it('заблокированный пользователь не входит', async () => {
-    const res = await new Client(ctx.app).post('/v1/auth/login', { email: 's.bashlykov@client.ru', password: PASSWORD });
+    const res = await new Client(ctx.app).post('/v1/auth/login', {
+      email: 's.bashlykov@client.ru',
+      password: PASSWORD,
+    });
     expect(res.statusCode).toBe(403);
     expect(res.json().detail).toMatch(/заблокирована/);
     expect(res.headers['set-cookie']).toBeUndefined();
@@ -67,7 +97,8 @@ describe('вход и сессия', () => {
   it('блокировка после 5 неудачных попыток; даже верный пароль не пускает', async () => {
     const { email } = await registerFresh();
     const c = new Client(ctx.app);
-    for (let i = 0; i < 5; i++) expect((await c.post('/v1/auth/login', { email, password: 'wrong-password-1' })).statusCode).toBe(401);
+    for (let i = 0; i < 5; i++)
+      expect((await c.post('/v1/auth/login', { email, password: 'wrong-password-1' })).statusCode).toBe(401);
     const locked = await c.post('/v1/auth/login', { email, password: PASSWORD });
     expect(locked.statusCode).toBe(423);
     expect(locked.json().code).toBe('locked');
@@ -126,7 +157,11 @@ describe('защита от CSRF и подделки источника', () => 
   });
 
   it('чужой Origin отклоняется даже без сессии', async () => {
-    const res = await new Client(ctx.app).post('/v1/auth/login', { email: 'a.prokhorov@altai.media', password: PASSWORD }, { headers: { origin: 'https://evil.example' } });
+    const res = await new Client(ctx.app).post(
+      '/v1/auth/login',
+      { email: 'a.prokhorov@altai.media', password: PASSWORD },
+      { headers: { origin: 'https://evil.example' } },
+    );
     expect(res.statusCode).toBe(403);
   });
 });
@@ -145,7 +180,14 @@ describe('двухфакторная аутентификация', () => {
     expect(recovery).toHaveLength(8);
 
     // секрет в БД хранится зашифрованным
-    const enc = await withAdmin(async (a) => (await a.query<{ totp_secret_enc: string }>('SELECT totp_secret_enc FROM users WHERE email = $1', [email])).rows[0]!.totp_secret_enc);
+    const enc = await withAdmin(
+      async (a) =>
+        (
+          await a.query<{ totp_secret_enc: string }>('SELECT totp_secret_enc FROM users WHERE email = $1', [
+            email,
+          ])
+        ).rows[0]!.totp_secret_enc,
+    );
     expect(enc.startsWith('v1.')).toBe(true);
     expect(decryptSecret(enc, parseEncryptionKey(DEV_ENCRYPTION_KEY))).toBe(setup.secret);
     expect(enc).not.toContain(setup.secret);
@@ -193,8 +235,13 @@ describe('двухфакторная аутентификация', () => {
       // отключить 2FA владельцу нельзя
       const { client: other } = await registerFresh();
       const s = (await other.post('/v1/auth/2fa/setup')).json();
-      await other.post('/v1/auth/2fa/enable', { code: totp(Buffer.from(base32Decode(s.secret)), Date.now()) });
-      const dis = await other.post('/v1/auth/2fa/disable', { password: PASSWORD, code: totp(Buffer.from(base32Decode(s.secret)), Date.now() + 30_000) });
+      await other.post('/v1/auth/2fa/enable', {
+        code: totp(Buffer.from(base32Decode(s.secret)), Date.now()),
+      });
+      const dis = await other.post('/v1/auth/2fa/disable', {
+        password: PASSWORD,
+        code: totp(Buffer.from(base32Decode(s.secret)), Date.now() + 30_000),
+      });
       expect(dis.statusCode).toBe(403);
     } finally {
       await setPlatformSetting('auth.mfa.enforceForAdmins', false);
@@ -206,7 +253,12 @@ describe('регистрация', () => {
   it('закрыта настройкой платформы', async () => {
     await setPlatformSetting('auth.registration.open', false);
     try {
-      const res = await new Client(ctx.app).post('/v1/auth/register', { email: 'x@example.com', password: PASSWORD, name: 'X', workspaceName: 'Тест' });
+      const res = await new Client(ctx.app).post('/v1/auth/register', {
+        email: 'x@example.com',
+        password: PASSWORD,
+        name: 'X',
+        workspaceName: 'Тест',
+      });
       expect(res.statusCode).toBe(403);
     } finally {
       await setPlatformSetting('auth.registration.open', true);
@@ -222,11 +274,26 @@ describe('регистрация', () => {
   });
 
   it('проверяет пароль и уникальность email', async () => {
-    const weak = await new Client(ctx.app).post('/v1/auth/register', { email: 'weak@example.com', password: 'short', name: 'W', workspaceName: 'Тест' });
+    const weak = await new Client(ctx.app).post('/v1/auth/register', {
+      email: 'weak@example.com',
+      password: 'short',
+      name: 'W',
+      workspaceName: 'Тест',
+    });
     expect(weak.statusCode).toBe(422);
-    const dup = await new Client(ctx.app).post('/v1/auth/register', { email: 'a.prokhorov@altai.media', password: PASSWORD, name: 'D', workspaceName: 'Тест' });
+    const dup = await new Client(ctx.app).post('/v1/auth/register', {
+      email: 'a.prokhorov@altai.media',
+      password: PASSWORD,
+      name: 'D',
+      workspaceName: 'Тест',
+    });
     expect(dup.statusCode).toBe(409);
-    const bad = await new Client(ctx.app).post('/v1/auth/register', { email: 'not-an-email', password: PASSWORD, name: 'D', workspaceName: 'Тест' });
+    const bad = await new Client(ctx.app).post('/v1/auth/register', {
+      email: 'not-an-email',
+      password: PASSWORD,
+      name: 'D',
+      workspaceName: 'Тест',
+    });
     expect(bad.statusCode).toBe(422);
     expect(bad.json().errors[0].path).toBe('email');
   });
@@ -243,11 +310,21 @@ describe('сброс и смена пароля', () => {
     const token = /token=([\w-]+)/.exec(mail.text)![1]!;
     const fresh = new Client(ctx.app);
     expect((await fresh.post('/v1/auth/password/reset', { token, password: 'short' })).statusCode).toBe(422);
-    expect((await fresh.post('/v1/auth/password/reset', { token, password: 'Новый-надёжный-пароль-77' })).statusCode).toBe(200);
-    expect((await fresh.post('/v1/auth/password/reset', { token, password: 'Ещё-один-пароль-88' })).statusCode).toBe(400); // токен одноразовый
+    expect(
+      (await fresh.post('/v1/auth/password/reset', { token, password: 'Новый-надёжный-пароль-77' }))
+        .statusCode,
+    ).toBe(200);
+    expect(
+      (await fresh.post('/v1/auth/password/reset', { token, password: 'Ещё-один-пароль-88' })).statusCode,
+    ).toBe(400); // токен одноразовый
     expect((await client.get('/v1/auth/me')).statusCode).toBe(401); // старые сессии отозваны
-    expect((await new Client(ctx.app).post('/v1/auth/login', { email, password: PASSWORD })).statusCode).toBe(401);
-    expect((await new Client(ctx.app).post('/v1/auth/login', { email, password: 'Новый-надёжный-пароль-77' })).statusCode).toBe(200);
+    expect((await new Client(ctx.app).post('/v1/auth/login', { email, password: PASSWORD })).statusCode).toBe(
+      401,
+    );
+    expect(
+      (await new Client(ctx.app).post('/v1/auth/login', { email, password: 'Новый-надёжный-пароль-77' }))
+        .statusCode,
+    ).toBe(200);
   });
 
   it('для неизвестного адреса ответ тот же, письмо не уходит', async () => {
@@ -260,8 +337,18 @@ describe('сброс и смена пароля', () => {
   it('смена пароля требует текущий и отзывает остальные сессии', async () => {
     const { client, email } = await registerFresh();
     const other = await loginAs(ctx, email);
-    expect((await client.post('/v1/auth/password/change', { current: 'wrong-password-1', next: 'Другой-пароль-12345' })).statusCode).toBe(401);
-    expect((await client.post('/v1/auth/password/change', { current: PASSWORD, next: 'Другой-пароль-12345' })).statusCode).toBe(200);
+    expect(
+      (
+        await client.post('/v1/auth/password/change', {
+          current: 'wrong-password-1',
+          next: 'Другой-пароль-12345',
+        })
+      ).statusCode,
+    ).toBe(401);
+    expect(
+      (await client.post('/v1/auth/password/change', { current: PASSWORD, next: 'Другой-пароль-12345' }))
+        .statusCode,
+    ).toBe(200);
     expect((await client.get('/v1/auth/me')).statusCode).toBe(200);
     expect((await other.get('/v1/auth/me')).statusCode).toBe(401);
   });
@@ -271,11 +358,23 @@ describe('инфраструктура API', () => {
   it('каждый маршрут объявляет уровень доступа; публичные — только из списка', () => {
     const missing = ctx.app.routeTable.filter((r) => !r.access).map((r) => `${r.method} ${r.url}`);
     expect(missing, 'Маршруты без access.*():').toEqual([]);
-    const publicRoutes = ctx.app.routeTable.filter((r) => r.access === 'public').map((r) => `${r.method} ${r.url}`).sort();
-    expect(publicRoutes).toEqual([
-      'GET /healthz', 'GET /metrics', 'GET /readyz', 'GET /v1/auth/invitations/:token', 'POST /v1/auth/invitations/accept',
-      'POST /v1/auth/login', 'POST /v1/auth/password/forgot', 'POST /v1/auth/password/reset', 'POST /v1/auth/register',
-    ].sort());
+    const publicRoutes = ctx.app.routeTable
+      .filter((r) => r.access === 'public')
+      .map((r) => `${r.method} ${r.url}`)
+      .sort();
+    expect(publicRoutes).toEqual(
+      [
+        'GET /healthz',
+        'GET /metrics',
+        'GET /readyz',
+        'GET /v1/auth/invitations/:token',
+        'POST /v1/auth/invitations/accept',
+        'POST /v1/auth/login',
+        'POST /v1/auth/password/forgot',
+        'POST /v1/auth/password/reset',
+        'POST /v1/auth/register',
+      ].sort(),
+    );
   });
 
   it('заголовки безопасности, request-id, формат ошибок', async () => {
@@ -305,7 +404,9 @@ describe('инфраструктура API', () => {
     try {
       const c = new Client(limited.app);
       let last = 0;
-      for (let i = 0; i < 22; i++) last = (await c.post('/v1/auth/login', { email: 'ghost@example.com', password: 'wrong-password-1' })).statusCode;
+      for (let i = 0; i < 22; i++)
+        last = (await c.post('/v1/auth/login', { email: 'ghost@example.com', password: 'wrong-password-1' }))
+          .statusCode;
       expect(last).toBe(429);
     } finally {
       await limited.close();

@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { AppError, CONTENT_POLICIES, DEFAULT_CONTENT_POLICY, SOURCE_KINDS, type SourceKind } from '@mediaradar/core';
+import {
+  AppError,
+  CONTENT_POLICIES,
+  DEFAULT_CONTENT_POLICY,
+  SOURCE_KINDS,
+  type SourceKind,
+} from '@mediaradar/core';
 import type { Permission } from '@mediaradar/rbac';
 
 /**
@@ -22,7 +28,11 @@ export interface SettingDefinition<T = unknown> {
   scopes: SettingScope[];
   /** Кто может менять на каждом уровне: разрешение или 'self' (владелец настройки). */
   editPermission: Partial<Record<SettingScope, Permission | 'self'>>;
-  ui: { kind: 'bool' | 'number' | 'enum' | 'text' | 'multi'; options?: Array<{ value: string; label: string }>; unit?: string };
+  ui: {
+    kind: 'bool' | 'number' | 'enum' | 'text' | 'multi';
+    options?: Array<{ value: string; label: string }>;
+    unit?: string;
+  };
   secret?: boolean;
   requiresRestart?: boolean;
   affectsBilling?: boolean;
@@ -53,12 +63,17 @@ function def<T>(d: SettingDefinition<T>): void {
   if (REGISTRY.has(d.key)) throw new Error(`Duplicate setting key: ${d.key}`);
   const parsed = d.schema.safeParse(d.default);
   if (!parsed.success) throw new Error(`Default for ${d.key} does not satisfy its schema`);
-  for (const s of d.scopes) if (!d.editPermission[s]) throw new Error(`Setting ${d.key}: no edit permission for scope ${s}`);
+  for (const s of d.scopes)
+    if (!d.editPermission[s]) throw new Error(`Setting ${d.key}: no edit permission for scope ${s}`);
   REGISTRY.set(d.key, d as SettingDefinition);
 }
 
 const opts = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }));
-const POLICY_OPTS = opts({ full: 'Полный текст', excerpt: 'Заголовок + лид + ссылка', metadata: 'Только метаданные' });
+const POLICY_OPTS = opts({
+  full: 'Полный текст',
+  excerpt: 'Заголовок + лид + ссылка',
+  metadata: 'Только метаданные',
+});
 const T_SETTINGS: Permission = 'tenant:settings';
 const T_BASIC: Permission = 'tenant:settings_basic';
 
@@ -68,7 +83,8 @@ for (const kind of Object.keys(SOURCE_KINDS) as SourceKind[]) {
     key: `content.policy.default.${kind}`,
     group: 'content',
     title: `Политика контента по умолчанию: ${SOURCE_KINDS[kind]}`,
-    description: 'Что отдаём пользователям из материалов этого типа источников. Источник или тенант могут переопределить.',
+    description:
+      'Что отдаём пользователям из материалов этого типа источников. Источник или тенант могут переопределить.',
     schema: z.enum(CONTENT_POLICIES),
     default: DEFAULT_CONTENT_POLICY[kind],
     scopes: ['platform', 'tenant'],
@@ -267,7 +283,12 @@ def({
 
 // --- retention -------------------------------------------------------------------------------
 const RETENTION: Array<[string, string, number | null, string]> = [
-  ['rawHtmlDays', 'Хранение сырого HTML/JSON', 90, 'Сколько дней храним исходные документы для перепарсинга.'],
+  [
+    'rawHtmlDays',
+    'Хранение сырого HTML/JSON',
+    90,
+    'Сколько дней храним исходные документы для перепарсинга.',
+  ],
   ['articleDays', 'Хранение нормализованных материалов', null, 'Пусто — бессрочно.'],
   ['aiCallLogDays', 'Хранение журнала AI-вызовов', 30, 'Срок хранения журнала запросов к моделям.'],
   ['fetchRunDays', 'Хранение журнала прогонов', 180, 'Агрегаты по прогонам хранятся бессрочно.'],
@@ -294,7 +315,8 @@ def({
   key: 'moderation.mode',
   group: 'moderation',
   title: 'Режим модерации',
-  description: 'auto — публикуем сразу; manual — только после одобрения; hybrid — ручная проверка спорных источников.',
+  description:
+    'auto — публикуем сразу; manual — только после одобрения; hybrid — ручная проверка спорных источников.',
   schema: z.enum(['auto', 'manual', 'hybrid']),
   default: 'auto',
   scopes: ['platform', 'tenant', 'source'],
@@ -338,7 +360,8 @@ def({
   key: 'portal.public.showFullText',
   group: 'portal',
   title: 'Показывать полный текст на публичном портале',
-  description: 'Ограничено политикой контента источника: полный текст показывается только там, где он разрешён.',
+  description:
+    'Ограничено политикой контента источника: полный текст показывается только там, где он разрешён.',
   schema: z.boolean(),
   default: false,
   scopes: ['tenant'],
@@ -407,10 +430,30 @@ def({
 // --- integrations ---------------------------------------------------------------------------
 export const INTEGRATIONS: Array<{ id: string; name: string; description: string; phase: number }> = [
   { id: 'yookassa', name: 'ЮKassa', description: 'Эквайринг, подписки, возвраты, чеки 54-ФЗ', phase: 8 },
-  { id: 'telegram_bot', name: 'Telegram Bot API', description: 'Уведомления, алерты, бот-интерфейс ленты', phase: 5 },
-  { id: 'ai_gateway', name: 'AI Gateway', description: 'GigaChat, YandexGPT, Qwen, DeepSeek, локальные модели', phase: 3 },
-  { id: 'email', name: 'Почта (SMTP / Unisender)', description: 'Рассылки дайджестов и системные письма', phase: 5 },
-  { id: 'object_storage', name: 'Объектное хранилище (S3)', description: 'Изображения, PDF, бэкапы', phase: 1 },
+  {
+    id: 'telegram_bot',
+    name: 'Telegram Bot API',
+    description: 'Уведомления, алерты, бот-интерфейс ленты',
+    phase: 5,
+  },
+  {
+    id: 'ai_gateway',
+    name: 'AI Gateway',
+    description: 'GigaChat, YandexGPT, Qwen, DeepSeek, локальные модели',
+    phase: 3,
+  },
+  {
+    id: 'email',
+    name: 'Почта (SMTP / Unisender)',
+    description: 'Рассылки дайджестов и системные письма',
+    phase: 5,
+  },
+  {
+    id: 'object_storage',
+    name: 'Объектное хранилище (S3)',
+    description: 'Изображения, PDF, бэкапы',
+    phase: 1,
+  },
   { id: 'dadata', name: 'Дадата', description: 'Обогащение: ЕГРЮЛ, адреса, ИНН', phase: 9 },
   { id: 'geocoder', name: 'Геокодер', description: 'Привязка материалов к координатам', phase: 4 },
   { id: 'translate', name: 'Переводчик', description: 'Мультиязычность для экспансии', phase: 9 },
@@ -471,7 +514,11 @@ export interface ResolvedSetting {
 }
 
 /** Выбирает значение самого специфичного подходящего уровня: user › source › tenant › platform › default. */
-export function resolveSetting(definition: SettingDefinition, rows: StoredSetting[], ctx: ResolveContext): ResolvedSetting {
+export function resolveSetting(
+  definition: SettingDefinition,
+  rows: StoredSetting[],
+  ctx: ResolveContext,
+): ResolvedSetting {
   let best: { rank: number; row: StoredSetting } | null = null;
   for (const row of rows) {
     if (!definition.scopes.includes(row.scope_type)) continue;
@@ -484,5 +531,7 @@ export function resolveSetting(definition: SettingDefinition, rows: StoredSettin
     const rank = SCOPE_ORDER.indexOf(row.scope_type);
     if (!best || rank > best.rank) best = { rank, row };
   }
-  return best ? { value: best.row.value, from: best.row.scope_type } : { value: definition.default, from: 'default' };
+  return best
+    ? { value: best.row.value, from: best.row.scope_type }
+    : { value: definition.default, from: 'default' };
 }

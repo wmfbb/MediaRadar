@@ -12,7 +12,11 @@ export const httpDuration = new client.Histogram({
   buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5],
   registers: [registry],
 });
-export const wsConnections = new client.Gauge({ name: 'mediaradar_ws_connections', help: 'Открытые WebSocket-соединения', registers: [registry] });
+export const wsConnections = new client.Gauge({
+  name: 'mediaradar_ws_connections',
+  help: 'Открытые WebSocket-соединения',
+  registers: [registry],
+});
 
 export function registerMetrics(app: FastifyInstance, config: Config): void {
   app.addHook('onResponse', async (req, reply) => {
@@ -26,7 +30,8 @@ export function registerMetrics(app: FastifyInstance, config: Config): void {
     const auth = req.headers.authorization ?? '';
     const tokenOk = !!config.METRICS_TOKEN && safeEqual(auth, `Bearer ${config.METRICS_TOKEN}`);
     const local = !config.isProd && ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip);
-    if (!tokenOk && !local) return reply.status(403).send({ code: 'forbidden', detail: 'Доступ к метрикам закрыт' });
+    if (!tokenOk && !local)
+      return reply.status(403).send({ code: 'forbidden', detail: 'Доступ к метрикам закрыт' });
     return reply.type(registry.contentType).send(await registry.metrics());
   });
 }

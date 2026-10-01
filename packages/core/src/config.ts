@@ -25,7 +25,14 @@ const schema = z.object({
   CORS_ORIGINS: z
     .string()
     .optional()
-    .transform((v) => (v ? v.split(',').map((s) => s.trim()).filter(Boolean) : [])),
+    .transform((v) =>
+      v
+        ? v
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [],
+    ),
   TRUST_PROXY: bool.default(false),
 });
 
