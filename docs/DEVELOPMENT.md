@@ -26,6 +26,20 @@ make dev
 - Документация API (Swagger): <http://localhost:4000/docs>
 - Проверки: `GET :4000/healthz`, `GET :4000/readyz` (БД + Redis), `GET :4000/metrics` (Prometheus; в production только с токеном)
 
+**Без `make` (например, Windows без WSL)** — те же шаги по одному:
+
+```bash
+git clone -b claude/tender-euler-xn20eh https://github.com/wmfbb/MediaRadar.git && cd MediaRadar
+pnpm install
+cp .env.example .env            # в Windows: copy .env.example .env
+docker compose -f deploy/docker-compose.dev.yml up -d --wait
+pnpm db:migrate
+pnpm db:seed --if-empty
+pnpm dev
+```
+
+Обновить код позже: `git pull`, затем `pnpm install` и `pnpm db:migrate`.
+
 ### Демо-аккаунты
 
 Пароль у всех: `Demo-Passw0rd!`
