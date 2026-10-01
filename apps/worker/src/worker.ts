@@ -2,8 +2,8 @@ import { createServer, type Server } from 'node:http';
 import { Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import { loadConfig } from '@mediaradar/core';
-import { createDb, type Db } from '@mediaradar/db';
-import { QUEUES, handleCollect, handleDemoLive, type Logger } from './jobs';
+import { createDb, seedRealEntities, type Db } from '@mediaradar/db';
+import { QUEUES, handleCollect, handleDemoLive, handleEnrich, type Logger } from './jobs';
 
 export interface WorkerOptions {
   redisUrl: string;
@@ -12,6 +12,8 @@ export interface WorkerOptions {
   demoIntervalSec: number;
   /** Периодический сбор источников и проверка удалений (COLLECT_ENABLED). Ручной запуск работает всегда. */
   collect?: boolean;
+  /** Плановая разметка неразмеченных материалов (ENRICH_ENABLED, по умолчанию включена). */
+  enrich?: boolean;
   healthPort: number | null;
   logger: Logger;
 }
@@ -31,6 +33,14 @@ export async function startWorker(opts: WorkerOptions): Promise<RunningWorker> {
   const bus = {
     publish: (channel: string, payload: unknown) => pub.publish(channel, JSON.stringify(payload)),
   };
+
+  // Словарь персон и организаций обновляется при каждом старте: обновили код — перезапустили воркер — словарь актуален.
+  try {
+    const { total } = await db.raw((q) => seedRealEntities(q));
+    log.info({ total }, 'enrich: словарь персон и организаций загружен');
+  } catch (e) {
+    log.warn({ err: (e as Error).message }, 'enrich: не удалось обновить словарь персон и организаций');
+  }
 
   const collectQueue = new Queue(QUEUES.collect, { connection });
   collectQueue.on('error', () => {});
@@ -56,6 +66,7 @@ export async function startWorker(opts: WorkerOptions): Promise<RunningWorker> {
       connection,
       concurrency: 1,
     }),
+    new Worker(QUEUES.enrich, () => handleEnrich((fn) => db.raw(fn), log), { connection, concurrency: 1 }),
   ];
   for (const w of workers) {
     w.on('failed', (job, err) =>
@@ -79,6 +90,19 @@ export async function startWorker(opts: WorkerOptions): Promise<RunningWorker> {
   } else {
     await collectQueue.removeJobScheduler('collect-tick').catch(() => {});
     await collectQueue.removeJobScheduler('verify-tick').catch(() => {});
+  }
+
+  const enrichQueue = new Queue(QUEUES.enrich, { connection });
+  enrichQueue.on('error', () => {});
+  if (opts.enrich ?? true) {
+    await enrichQueue.upsertJobScheduler(
+      'enrich-tick',
+      { every: 60_000 },
+      { name: 'tick', opts: { removeOnComplete: 5, removeOnFail: 20 } },
+    );
+    log.info({}, 'enrich: плановая разметка (тема, тональность, персоны, организации) включена');
+  } else {
+    await enrichQueue.removeJobScheduler('enrich-tick').catch(() => {});
   }
 
   const demoQueue = new Queue(QUEUES.demoLive, { connection });
@@ -111,6 +135,7 @@ export async function startWorker(opts: WorkerOptions): Promise<RunningWorker> {
       server?.close();
       await Promise.all(workers.map((w) => w.close()));
       await demoQueue.close();
+      await enrichQueue.close();
       await collectQueue.close();
       pub.disconnect();
       await db.close();
@@ -130,6 +155,7 @@ export function configFromEnv(logger: Logger): WorkerOptions {
     demoLive: config.DEMO_LIVE,
     demoIntervalSec: Number(process.env.DEMO_LIVE_INTERVAL_SEC ?? 8),
     collect: ['1', 'true', 'yes', 'on'].includes((process.env.COLLECT_ENABLED ?? '').toLowerCase()),
+    enrich: !['0', 'false', 'no', 'off'].includes((process.env.ENRICH_ENABLED ?? '').toLowerCase()),
     healthPort: process.env.WORKER_HEALTH_PORT ? Number(process.env.WORKER_HEALTH_PORT) : null,
     logger,
   };

@@ -150,4 +150,82 @@ describe('платформенная админка', () => {
     }
     expect((await superAdmin.get('/v1/admin/tenants')).statusCode).toBe(200);
   });
+
+  describe('ручная правка тематики и тональности', () => {
+    let articleId: string;
+    beforeAll(async () => {
+      articleId = await withAdmin(
+        async (c) =>
+          (
+            await c.query<{ id: string }>(
+              'SELECT id FROM articles WHERE visibility_tenant_id IS NULL LIMIT 1',
+            )
+          ).rows[0]!.id,
+      );
+    });
+    const labels = () =>
+      withAdmin(
+        async (c) =>
+          (
+            await c.query(
+              `SELECT (SELECT key FROM topics WHERE id = a.topic_id) AS topic, sentiment_label, sentiment_score, labels_locked, nlp_at
+                 FROM articles a WHERE id = $1`,
+              [articleId],
+            )
+          ).rows[0],
+      );
+
+    it('исправляет метки, закрывает «замок» и пишет аудит; reset возвращает материал в очередь на разметку', async () => {
+      const res = await superAdmin.patch(`/v1/admin/articles/${articleId}/labels`, {
+        topic: 'econ',
+        sentiment: 'NG',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(await labels()).toMatchObject({
+        topic: 'econ',
+        sentiment_label: 'NG',
+        sentiment_score: -0.4,
+        labels_locked: true,
+      });
+
+      // «без темы»
+      expect(
+        (await superAdmin.patch(`/v1/admin/articles/${articleId}/labels`, { topic: null })).statusCode,
+      ).toBe(200);
+      expect(await labels()).toMatchObject({ topic: null, sentiment_label: 'NG', labels_locked: true });
+
+      const audit = (await superAdmin.get('/v1/admin/audit?action=article.&limit=10')).json().items as Array<{
+        action: string;
+      }>;
+      expect(audit.some((x) => x.action === 'article.labels_edited')).toBe(true);
+
+      expect(
+        (await superAdmin.patch(`/v1/admin/articles/${articleId}/labels`, { reset: true })).statusCode,
+      ).toBe(200);
+      expect(await labels()).toMatchObject({ labels_locked: false, nlp_at: null });
+    });
+
+    it('проверяет вход: неизвестная тема, пустое тело, чужой материал, нет прав', async () => {
+      expect(
+        (await superAdmin.patch(`/v1/admin/articles/${articleId}/labels`, { topic: 'nope' })).statusCode,
+      ).toBe(400);
+      expect((await superAdmin.patch(`/v1/admin/articles/${articleId}/labels`, {})).statusCode).toBe(422);
+      expect(
+        (await superAdmin.patch(`/v1/admin/articles/${articleId}/labels`, { sentiment: 'XX' })).statusCode,
+      ).toBe(422);
+      expect(
+        (
+          await superAdmin.patch('/v1/admin/articles/00000000-0000-4000-8000-000000000000/labels', {
+            topic: 'agro',
+          })
+        ).statusCode,
+      ).toBe(404);
+      expect(
+        (await ownerB.patch(`/v1/admin/articles/${articleId}/labels`, { topic: 'agro' })).statusCode,
+      ).toBe(403);
+      expect(
+        (await support.patch(`/v1/admin/articles/${articleId}/labels`, { topic: 'agro' })).statusCode,
+      ).toBe(403);
+    });
+  });
 });

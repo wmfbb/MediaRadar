@@ -5,3 +5,4 @@ export * from './settings-store';
 export { seedDemo, resetDemo, DEMO_ACCOUNTS, DEMO_PASSWORD, type SeedSummary } from './seed';
 export { createLiveDemoArticle, type LiveArticle } from './seed/live';
 export { seedRealSources, REAL_SOURCES, type RealSource } from './seed/real-sources';
+export { seedRealEntities, REAL_ENTITIES, type RealEntity } from './seed/real-entities';

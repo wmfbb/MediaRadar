@@ -33,6 +33,8 @@ export default tseslint.config(
       '**/*.config.*',
       'packages/db/src/seed/**',
       'packages/db/src/cli/**',
+      'apps/worker/src/cli/**',
+      'apps/worker/src/enrich/eval-cli.ts',
     ],
     rules: { 'no-console': 'off' },
   },

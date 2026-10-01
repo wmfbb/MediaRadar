@@ -117,7 +117,8 @@ describe('сбор по RSS', () => {
     expect(published[0]![1]).toMatchObject({
       title: 'Свежая новость',
       source: { domain: 'feed.test' },
-      sentiment: null,
+      sentiment: { label: 'N', score: 0 }, // слов из словаря нет — разметка «нейтрально»
+      topic: null,
     });
 
     const src = (

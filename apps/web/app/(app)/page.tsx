@@ -98,7 +98,7 @@ function Kpis({ data }: { data: Dash }) {
           </div>
           {pending(k.key) ? (
             <div className="mt-1 text-[11px] text-faint">
-              {k.key === 'alerts' ? 'алерты появятся в Фазе 5' : 'тональность подключается в Фазе 3'}
+              {k.key === 'alerts' ? 'алерты появятся в Фазе 5' : 'материалы ещё размечаются'}
             </div>
           ) : (
             k.hint && <div className="mt-1 text-[11px] text-faint">{k.hint}</div>
@@ -193,7 +193,7 @@ function LiveTicker() {
               {r.label ? (
                 <SentimentBadge label={r.label} className="mt-0.5 flex-none" />
               ) : (
-                <Badge className="mt-0.5 flex-none" title="Анализ тональности подключается в Фазе 3">
+                <Badge className="mt-0.5 flex-none" title="Материал ждёт разметки (обычно до минуты)">
                   не оценено
                 </Badge>
               )}
@@ -239,14 +239,16 @@ function SentimentCard({ data }: { data: Dash }) {
         <h2 className="text-[15px] font-bold">Тональность</h2>
         <Badge>{num(data.sentiment.total)} матер.</Badge>
       </div>
-      <p className="mb-3 text-[12px] text-muted">Распределение за выбранный период</p>
+      <p className="mb-3 text-[12px] text-muted">
+        Распределение за выбранный период · разметка автоматическая, по словарям
+      </p>
       {data.sentiment.total > 0 ? (
         <Chart option={option} height={176} label="Круговая диаграмма тональности материалов" />
       ) : (
         <div className="grid h-[176px] place-items-center text-center text-[12.5px] text-muted">
-          Материалы собраны, но ещё не оценены.
+          Материалы собраны, но ещё не размечены.
           <br />
-          Анализ тональности подключается в Фазе 3.
+          Разметка идёт в фоне, обычно это занимает до минуты.
         </div>
       )}
       <ul className="mt-4 space-y-2 border-t border-line pt-4">
@@ -307,8 +309,7 @@ function VolumeCard({ data }: { data: Dash }) {
       </h2>
       <p className="mb-3 text-[12px] text-muted">
         Стековые области · {hourly ? 'по часам' : 'по дням'} · часовой пояс тенанта ({data.timezone})
-        {data.volume.by === 'source' &&
-          ' · темы материалов определяются в Фазе 3, пока — крупнейшие источники'}
+        {data.volume.by === 'source' && ' · темы ещё не определены, поэтому показаны крупнейшие источники'}
       </p>
       <Chart
         option={option}
@@ -377,9 +378,7 @@ function GeoCard({ data }: { data: Dash }) {
       <p className="mb-4 text-[12px] text-muted">Интенсивность инфоповодов по территории</p>
       {!places.length && (
         <p className="py-10 text-center text-[12.5px] text-muted">
-          Территории материалов определяются в Фазе 3.
-          <br />
-          Пока здесь пусто.
+          Территории материалов определяются позже: пока автоматической привязки к территории нет.
         </p>
       )}
       <div
@@ -449,17 +448,14 @@ function PersonsCard({ data }: { data: Dash }) {
         ))}
         {!data.persons.top.length && (
           <li className="py-8 text-center text-[12.5px] text-muted">
-            Персоны извлекаются автоматически (NER) в Фазе 3.
-            <br />
-            Пока здесь пусто.
+            В материалах за период персон из словаря не найдено.
           </li>
         )}
       </ul>
-      {data.persons.top.length > 0 && (
-        <p className="mt-4 text-[11px] text-faint">
-          Сущности в демо-режиме заданы синтетически; автоматическое извлечение (NER) подключается в Фазе 3.
-        </p>
-      )}
+      <p className="mt-4 text-[11px] text-faint">
+        Персоны — публичные лица из словаря, организации — по словарю и шаблонам («ООО «…»», «Администрация
+        …»). Это упрощённая разметка на правилах; полноценное распознавание подключается следующим шагом.
+      </p>
     </Card>
   );
 }

@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, resetDemo, seedDemo } from '../seed';
+import { seedRealEntities } from '../seed/real-entities';
 import { REAL_SOURCES, seedRealSources } from '../seed/real-sources';
 
 const args = new Set(process.argv.slice(2));
@@ -18,6 +19,8 @@ try {
   if (args.has('--sources-only')) {
     const r = await seedRealSources(client);
     console.log(`Реестр реальных источников: добавлено ${r.added} из ${r.total}.`);
+    const e = await seedRealEntities(client);
+    console.log(`Словарь персон и организаций: ${e.total} записей.`);
     process.exit(0);
   }
   const existing = await client.query('SELECT count(*)::int AS n FROM tenants');
@@ -37,6 +40,9 @@ try {
   const s = await seedDemo(client, real ? { articles: 0 } : {});
   if (real) {
     await client.query("DELETE FROM sources WHERE meta->>'demo' = 'true'");
+    // без материалов вымышленные персоны и организации демо никому не нужны; вместо них — словарь для разметки
+    await client.query('DELETE FROM entities');
+    await seedRealEntities(client);
     const r = await seedRealSources(client);
     console.log(
       `Реальные источники: ${r.total} (сбор начнётся при запущенном воркере с COLLECT_ENABLED=true).`,

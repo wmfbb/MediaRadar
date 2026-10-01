@@ -19,6 +19,15 @@ export function sentimentFromScore(score: number): SentimentLabel {
   return 'VN';
 }
 
+/** Оценка, которая записывается при ручном выборе градации (середина диапазона градации). */
+export const SENTIMENT_MANUAL_SCORE: Record<SentimentLabel, number> = {
+  VP: 0.8,
+  P: 0.4,
+  N: 0,
+  NG: -0.4,
+  VN: -0.8,
+};
+
 export const SOURCE_KINDS = {
   GOV_PORTAL: 'Гос. портал',
   NEWS_SITE: 'СМИ',

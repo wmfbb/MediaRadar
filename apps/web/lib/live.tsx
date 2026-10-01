@@ -8,7 +8,7 @@ export interface LiveArticle {
   topic: string | null;
   geo: string | null;
   source: { id: string; name: string; domain: string; kind: string };
-  /** null — материал собран, но ещё не оценён (анализ тональности подключается в Фазе 3). */
+  /** null — материал собран, но тональность ещё не определена (разметка идёт в фоне). */
   sentiment: { label: 'VP' | 'P' | 'N' | 'NG' | 'VN'; score: number } | null;
 }
 type Status = 'connecting' | 'live' | 'offline';
