@@ -7,6 +7,8 @@
     "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
     "build": "tsup",
     "start": "node dist/main.js",
+    "enrich": "tsx --env-file-if-exists=../../.env src/cli/enrich.ts",
+    "nlp:eval": "tsx src/enrich/eval-cli.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

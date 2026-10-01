@@ -1,6 +1,7 @@
 import type { Queryable } from '@mediaradar/db';
 import type { Logger, Publisher } from '../jobs';
 import { extractArticle, extractListLinks } from './html';
+import { enrichArticles, type Enriched } from '../enrich/enrich';
 import { parseFeed } from './feed';
 import { safeFetch, type Fetcher } from './http';
 import { canonicalUrl, cleanTitle, contentHash, htmlToText, makeLead, parseDate } from './normalize';
@@ -200,6 +201,18 @@ export async function collectSource(deps: CollectDeps, sourceId: string): Promis
       return rows;
     });
 
+    // Разметка (тема, тональность, персоны и организации) — сразу, чтобы Live показывал уже размеченное.
+    // Сбой разметки не мешает сбору: неразмеченное подберёт плановая очередь (enrichPending).
+    let labels = new Map<string, Enriched>();
+    try {
+      labels = await enrichArticles(
+        { run, log },
+        inserted.map((r) => r.id),
+      );
+    } catch (e) {
+      log.warn({ sourceId, err: (e as Error).message }, 'collect: разметка отложена');
+    }
+
     // Live: только свежие материалы, каждому подписанному тенанту
     const liveFrom = now.getTime() - LIVE_WINDOW_MS;
     const live = inserted.filter((r) => r.item.publishedAt.getTime() >= liveFrom);
@@ -219,9 +232,9 @@ export async function collectSource(deps: CollectDeps, sourceId: string): Promis
           title: item.title,
           publishedAt: item.publishedAt.toISOString(),
           source: { id: src.id, name: src.name, domain: src.domain, kind: src.kind },
-          topic: null,
+          topic: labels.get(id)?.topic ?? null,
           geo: null,
-          sentiment: null,
+          sentiment: labels.get(id)?.sentiment ?? null,
         };
         await Promise.all(tenantIds.map((t) => bus.publish(`tenant:${t}:feed`, event)));
       }

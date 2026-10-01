@@ -1,11 +1,12 @@
 import type { Queryable } from '@mediaradar/db';
 import { createLiveDemoArticle } from '@mediaradar/db';
 import { collectSource, type Run } from './collector/collect';
+import { enrichPending } from './enrich/enrich';
 import type { Fetcher } from './collector/http';
 import { selectDueSources } from './collector/schedule';
 import { verifyArticles } from './collector/verify';
 
-export const QUEUES = { collect: 'collect', demoLive: 'demo-live' } as const;
+export const QUEUES = { collect: 'collect', demoLive: 'demo-live', enrich: 'enrich' } as const;
 
 export interface Publisher {
   publish(channel: string, payload: unknown): Promise<unknown>;
@@ -61,4 +62,9 @@ export async function handleDemoLive(
   await Promise.all(tenantIds.map((t) => bus.publish(`tenant:${t}:feed`, event)));
   log.info({ articleId: article.id, tenants: tenantIds.length }, 'demo-live: материал создан и разослан');
   return { id: article.id, tenants: tenantIds.length };
+}
+
+/** Плановая разметка: берёт неразмеченные материалы (свежие, затем архив) и размечает партиями. */
+export async function handleEnrich(run: Run, log: Logger) {
+  return enrichPending({ run, log });
 }

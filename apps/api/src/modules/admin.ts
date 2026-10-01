@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { AppError } from '@mediaradar/core';
+import { AppError, SENTIMENT_KEYS, SENTIMENT_MANUAL_SCORE } from '@mediaradar/core';
 import { audit } from '../lib/audit';
 import { camelAll } from '../lib/http';
 import { requireAuth, type Access } from '../plugins/auth';
@@ -54,6 +54,89 @@ export async function adminRoutes(app: FastifyInstance, access: Access): Promise
           tenantId: req.params.id,
           action: 'platform.tenant_status_changed',
           objectType: 'tenant',
+          objectId: req.params.id,
+          before,
+          after: req.body,
+        });
+        return { status: 'ok' };
+      });
+    },
+  );
+
+  // Ручная правка тематики и тональности материала (общий слой: видна всем подписанным тенантам).
+  // Исправленное закрывается «замком» и не затирается пересчётом; reset снимает замок и ставит материал в очередь на разметку.
+  r.patch(
+    '/admin/articles/:id/labels',
+    {
+      ...access.platform('platform:sources'),
+      schema: {
+        params: z.object({ id: z.string().uuid() }),
+        body: z
+          .object({
+            topic: z.string().max(40).nullable().optional(),
+            sentiment: z.enum(SENTIMENT_KEYS as [string, ...string[]]).optional(),
+            reset: z.boolean().optional(),
+          })
+          .refine((b) => b.reset !== undefined || b.topic !== undefined || b.sentiment !== undefined, {
+            message: 'Укажите topic, sentiment или reset',
+          }),
+      },
+    },
+    async (req) => {
+      const a = requireAuth(req);
+      const { topic, sentiment, reset } = req.body;
+      return db.platform(a.userId, async (q) => {
+        const before = (
+          await q.query<{
+            topic: string | null;
+            sentiment_label: string | null;
+            sentiment_score: number | null;
+            labels_locked: boolean;
+          }>(
+            `SELECT (SELECT key FROM topics WHERE id = a.topic_id) AS topic, a.sentiment_label, a.sentiment_score, a.labels_locked
+               FROM articles a WHERE a.id = $1 FOR UPDATE`,
+            [req.params.id],
+          )
+        ).rows[0];
+        if (!before) throw new AppError('not_found', 'Материал не найден');
+        if (reset) {
+          await q.query('UPDATE articles SET labels_locked = false, nlp_at = NULL WHERE id = $1', [
+            req.params.id,
+          ]);
+        } else {
+          let topicId: string | null | undefined;
+          if (topic !== undefined) {
+            topicId = null;
+            if (topic !== null) {
+              topicId =
+                (
+                  await q.query<{ id: string }>(
+                    'SELECT id FROM topics WHERE key = $1 AND tenant_id IS NULL',
+                    [topic],
+                  )
+                ).rows[0]?.id ?? null;
+              if (!topicId) throw new AppError('bad_request', 'Неизвестная тема');
+            }
+          }
+          await q.query(
+            `UPDATE articles SET labels_locked = true,
+                topic_id = CASE WHEN $2 THEN $3 ELSE topic_id END,
+                sentiment_label = COALESCE($4, sentiment_label),
+                sentiment_score = COALESCE($5, sentiment_score)
+              WHERE id = $1`,
+            [
+              req.params.id,
+              topicId !== undefined,
+              topicId ?? null,
+              sentiment ?? null,
+              sentiment ? SENTIMENT_MANUAL_SCORE[sentiment as keyof typeof SENTIMENT_MANUAL_SCORE] : null,
+            ],
+          );
+        }
+        await audit(q, req, {
+          tenantId: null,
+          action: reset ? 'article.labels_reset' : 'article.labels_edited',
+          objectType: 'article',
           objectId: req.params.id,
           before,
           after: req.body,

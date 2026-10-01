@@ -541,6 +541,8 @@ export async function seedDemo(client: pg.Client, opts: SeedOptions = {}): Promi
     await client.query(
       'UPDATE sources s SET items_count = (SELECT count(*) FROM articles a WHERE a.source_id = s.id)',
     );
+    // синтетические материалы уже «размечены» сидом: разметчик (apps/worker/src/enrich) их не трогает
+    await client.query("UPDATE articles SET nlp_method = 'demo', nlp_at = now() WHERE nlp_at IS NULL");
 
     // --- слой тенанта ----------------------------------------------------------------------
     const T = tenantId['altai-krai'];

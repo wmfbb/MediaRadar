@@ -17,7 +17,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:migrate": "pnpm --filter @mediaradar/db migrate",
-    "db:seed": "pnpm --filter @mediaradar/db seed"
+    "db:seed": "pnpm --filter @mediaradar/db seed",
+    "enrich": "pnpm --filter @mediaradar/worker enrich",
+    "nlp:eval": "pnpm --filter @mediaradar/worker nlp:eval"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

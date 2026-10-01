@@ -81,8 +81,8 @@ export async function createLiveDemoArticle(q: Queryable): Promise<LiveArticle |
   const publishedAt = new Date();
 
   await q.query(
-    `INSERT INTO articles (id, source_id, url, canonical_url, title, lead, published_at, author, content_hash, topic_id, geo_id, sentiment_label, sentiment_score, views)
-     VALUES ($1, $2, $3, $3, $4, $5, $6, $7, $8, (SELECT id FROM topics WHERE key = $9 AND tenant_id IS NULL), (SELECT id FROM geo_places WHERE name = $10 LIMIT 1), $11, $12, $13)`,
+    `INSERT INTO articles (id, source_id, url, canonical_url, title, lead, published_at, author, content_hash, topic_id, geo_id, sentiment_label, sentiment_score, views, nlp_method, nlp_at)
+     VALUES ($1, $2, $3, $3, $4, $5, $6, $7, $8, (SELECT id FROM topics WHERE key = $9 AND tenant_id IS NULL), (SELECT id FROM geo_places WHERE name = $10 LIMIT 1), $11, $12, $13, 'demo', now())`,
     [
       id,
       src.id,
