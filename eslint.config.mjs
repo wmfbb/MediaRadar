@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
   { ignores: ['**/dist/**', '**/.next/**', '**/.turbo/**', '**/coverage/**', 'prototype/**', 'apps/web/next-env.d.ts'] },
@@ -18,6 +19,11 @@ export default tseslint.config(
   {
     files: ['**/*.test.ts', '**/*.test.tsx', '**/scripts/**', '**/*.config.*', 'packages/db/src/seed/**', 'packages/db/src/cli/**'],
     rules: { 'no-console': 'off' },
+  },
+  {
+    files: ['apps/web/**/*.{ts,tsx}', 'packages/ui/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: { 'react-hooks/rules-of-hooks': 'error', 'react-hooks/exhaustive-deps': 'warn' },
   },
   {
     // в тестах ответы API читаются как JSON произвольной формы

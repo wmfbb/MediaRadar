@@ -1,0 +1,18 @@
+/** Человекочитаемые названия разрешений для матрицы ролей. */
+export const PERMISSION_LABELS: Record<string, string> = {
+  'tenant:read': 'Просмотр сведений о тенанте', 'notification:read': 'Уведомления', 'feed:read': 'Лента и поиск', 'filter:manage_own': 'Личные фильтры',
+  'dashboard:read': 'Просмотр дашбордов', 'dashboard:build_own': 'Личные дашборды', 'dashboard:build_team': 'Командные дашборды и фильтры', 'analytics:build': 'Конструктор аналитики',
+  'export:run': 'Экспорт данных', 'report:read': 'Просмотр отчётов', 'report:create': 'Создание отчётов', 'report:schedule': 'Расписание отчётов', 'report:publish_auto': 'Публикация автообзоров',
+  'alert:manage_own': 'Личные алерты', 'alert:manage_team': 'Командные алерты', 'source:read': 'Просмотр источников', 'source:propose': 'Предложить источник', 'source:manage_private': 'Приватные источники и парсеры',
+  'article:moderate': 'Модерация материалов', 'article:edit_meta': 'Рубрики, метки, саммари', 'entity:edit': 'Справочник сущностей', 'user:read': 'Просмотр команды', 'user:manage': 'Управление пользователями',
+  'role:manage': 'Управление ролями', 'tenant:settings_basic': 'Базовые настройки', 'tenant:settings': 'Полные настройки и white-label', 'billing:manage': 'Тариф и оплата', 'apikey:manage': 'API-ключи', 'audit:read': 'Журнал аудита',
+};
+
+export const AUDIT_LABELS: Record<string, string> = {
+  'auth.register': 'Регистрация', 'auth.login': 'Вход', 'auth.login_failed': 'Неудачная попытка входа', 'auth.locked': 'Блокировка из-за подбора пароля', 'auth.logout': 'Выход', 'auth.switch_tenant': 'Смена тенанта',
+  'auth.2fa_enabled': '2FA включена', 'auth.2fa_disabled': '2FA отключена', 'auth.recovery_code_used': 'Использован резервный код', 'auth.password_changed': 'Смена пароля', 'auth.password_reset_requested': 'Запрос сброса пароля', 'auth.password_reset': 'Сброс пароля',
+  'tenant.updated': 'Изменён тенант', 'tenant.member_updated': 'Изменён участник', 'tenant.member_removed': 'Удалён участник', 'tenant.invitation_created': 'Создано приглашение', 'tenant.invitation_revoked': 'Приглашение отозвано', 'tenant.invitation_accepted': 'Приглашение принято',
+  'settings.updated': 'Изменена настройка', 'settings.cleared': 'Сброшена настройка', 'settings.rolled_back': 'Откат настройки', 'source.created': 'Создан источник', 'source.paused': 'Источник на паузе', 'source.resumed': 'Источник возобновлён', 'source.run_requested': 'Запуск сбора', 'source.config_updated': 'Изменена конфигурация источника',
+  'alert.created': 'Создан алерт', 'alert.enabled': 'Алерт включён', 'alert.disabled': 'Алерт выключен', 'alert.deleted': 'Алерт удалён', 'report.requested': 'Запрошен отчёт', 'filter.created': 'Сохранён фильтр',
+  'platform.tenant_status_changed': 'Изменён статус тенанта', 'platform.flag_changed': 'Изменён флаг функции', 'seed.demo': 'Загрузка демо-данных',
+};

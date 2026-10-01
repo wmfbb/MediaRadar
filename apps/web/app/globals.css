@@ -1,0 +1,4 @@
+@import 'tailwindcss';
+@import '@mediaradar/ui/theme.css';
+@source "../../../packages/ui/src";
+@custom-variant dark (&:where(.dark, .dark *));

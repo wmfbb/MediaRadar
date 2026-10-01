@@ -5,7 +5,9 @@
   "description": "МедиаРадар — платформа региональной медиа-аналитики",
   "type": "module",
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
@@ -21,6 +23,7 @@
     "@eslint/js": "^9.39.0",
     "eslint": "^9.39.0",
     "eslint-config-prettier": "^10.1.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^16.0.0",
     "prettier": "^3.6.0",
     "turbo": "^2.11.6",
