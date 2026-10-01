@@ -50,7 +50,11 @@ interface Dash {
       share: number;
     }>;
   };
-  volume: { labels: string[]; series: Array<{ key: string; name: string; color: string; data: number[] }> };
+  volume: {
+    by: 'topic' | 'source';
+    labels: string[];
+    series: Array<{ key: string; name: string; color: string; data: number[] }>;
+  };
   topSources: Array<{ id: string; name: string; domain: string; count: number }>;
   geo: { places: Array<{ id: string; name: string; level: string; count: number }>; total: number };
   persons: { top: Array<{ name: string; count: number }>; total: number };
@@ -77,6 +81,8 @@ const SPARK_COLORS: Record<string, string> = {
 
 function Kpis({ data }: { data: Dash }) {
   const analyzed = data.sentiment.total > 0;
+  // движка алертов ещё нет (Фаза 5): счётчик в базе — демо-значение, показывать его как факт нельзя
+  const pending = (key: string) => (key === 'negative' && !analyzed) || key === 'alerts';
   return (
     <div className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
       {data.kpis.map((k) => (
@@ -88,10 +94,12 @@ function Kpis({ data }: { data: Dash }) {
             <Delta value={k.delta} goodWhenUp={k.goodWhenUp} />
           </div>
           <div className="font-mono text-[26px] font-extrabold leading-none tracking-tight">
-            {k.key === 'negative' && !analyzed ? '—' : num(k.value)}
+            {pending(k.key) ? '—' : num(k.value)}
           </div>
-          {k.key === 'negative' && !analyzed ? (
-            <div className="mt-1 text-[11px] text-faint">тональность подключается в Фазе 3</div>
+          {pending(k.key) ? (
+            <div className="mt-1 text-[11px] text-faint">
+              {k.key === 'alerts' ? 'алерты появятся в Фазе 5' : 'тональность подключается в Фазе 3'}
+            </div>
           ) : (
             k.hint && <div className="mt-1 text-[11px] text-faint">{k.hint}</div>
           )}
@@ -294,11 +302,19 @@ function VolumeCard({ data }: { data: Dash }) {
   );
   return (
     <Card className="p-5 xl:col-span-2">
-      <h2 className="text-[15px] font-bold">Динамика публикаций по темам</h2>
+      <h2 className="text-[15px] font-bold">
+        Динамика публикаций по {data.volume.by === 'topic' ? 'темам' : 'источникам'}
+      </h2>
       <p className="mb-3 text-[12px] text-muted">
         Стековые области · {hourly ? 'по часам' : 'по дням'} · часовой пояс тенанта ({data.timezone})
+        {data.volume.by === 'source' &&
+          ' · темы материалов определяются в Фазе 3, пока — крупнейшие источники'}
       </p>
-      <Chart option={option} height={270} label="График динамики публикаций по темам" />
+      <Chart
+        option={option}
+        height={270}
+        label={`График динамики публикаций по ${data.volume.by === 'topic' ? 'темам' : 'источникам'}`}
+      />
     </Card>
   );
 }
@@ -359,6 +375,13 @@ function GeoCard({ data }: { data: Dash }) {
         <Badge>{places.length} терр.</Badge>
       </div>
       <p className="mb-4 text-[12px] text-muted">Интенсивность инфоповодов по территории</p>
+      {!places.length && (
+        <p className="py-10 text-center text-[12.5px] text-muted">
+          Территории материалов определяются в Фазе 3.
+          <br />
+          Пока здесь пусто.
+        </p>
+      )}
       <div
         className="mb-4 grid grid-cols-9 gap-1"
         role="img"
@@ -425,12 +448,18 @@ function PersonsCard({ data }: { data: Dash }) {
           </li>
         ))}
         {!data.persons.top.length && (
-          <li className="py-8 text-center text-[13px] text-muted">Нет данных за период</li>
+          <li className="py-8 text-center text-[12.5px] text-muted">
+            Персоны извлекаются автоматически (NER) в Фазе 3.
+            <br />
+            Пока здесь пусто.
+          </li>
         )}
       </ul>
-      <p className="mt-4 text-[11px] text-faint">
-        Сущности в демо-режиме заданы синтетически; автоматическое извлечение (NER) подключается в Фазе 3.
-      </p>
+      {data.persons.top.length > 0 && (
+        <p className="mt-4 text-[11px] text-faint">
+          Сущности в демо-режиме заданы синтетически; автоматическое извлечение (NER) подключается в Фазе 3.
+        </p>
+      )}
     </Card>
   );
 }

@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import { Card, Chart, Segmented, Skeleton, axisStyle, useChartTheme } from '@mediaradar/ui';
 import { heatStyle } from '@/components/charts-common';
 import { ErrorBox, PageHeader } from '@/components/page';
-import { num, sentimentScore } from '@/lib/format';
+import { num } from '@/lib/format';
 import { useUrlParam } from '@/lib/hooks';
 
 const RANGES = ['7d', '30d', '90d'] as const;
@@ -14,14 +14,24 @@ interface Overview {
   from: string;
   to: string;
   timezone: string;
-  kpis: { articles: number; avgSentiment: number | null; uniquePersons: number; critical: number };
+  kpis: {
+    articles: number;
+    avgSentiment: number | null;
+    uniquePersons: number;
+    critical: number;
+    sources: number;
+    last24h: number;
+    perDay: number | null;
+  };
+  dailyVolume: Array<{ date: string; count: number; complete: boolean; spike: boolean }>;
   sentimentIndex: Array<{ date: string; score: number; average: number }>;
   sourceComparison: Array<{
     id: string;
     name: string;
     domain: string;
     count: number;
-    negativeShare: number;
+    share: number;
+    negativeShare: number | null;
     trust: number;
   }>;
   heatmap: {
@@ -40,6 +50,58 @@ function Analytics() {
     keepPreviousData: true,
   });
   const t = useChartTheme();
+
+  const dayLabel = (d: string) =>
+    new Date(`${d}T12:00:00Z`).toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+      timeZone: 'UTC',
+    });
+  const dailyOption = useMemo(
+    () =>
+      data && {
+        grid: { left: 40, right: 12, top: 12, bottom: 28 },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          formatter: (p: Array<{ dataIndex: number }>) => {
+            const d = data.dailyVolume[p[0]!.dataIndex]!;
+            const note = d.spike
+              ? '<br/><b style="color:#e11d48">всплеск</b>'
+              : d.complete
+                ? ''
+                : '<br/><span style="opacity:.7">данные неполные</span>';
+            return `${dayLabel(d.date)}<br/><b>${num(d.count)}</b> материалов${note}`;
+          },
+        },
+        xAxis: {
+          type: 'category',
+          data: data.dailyVolume.map((d) => dayLabel(d.date)),
+          ...axisStyle(t),
+          splitLine: { show: false },
+        },
+        yAxis: { type: 'value', ...axisStyle(t) },
+        series: [
+          {
+            type: 'bar',
+            barWidth: '72%',
+            data: data.dailyVolume.map((d) => ({
+              value: d.count,
+              itemStyle: {
+                color: d.spike ? '#e11d48' : '#3363ff',
+                opacity: d.complete ? 1 : 0.35,
+                borderRadius: [3, 3, 0, 0],
+              },
+            })),
+          },
+        ],
+      },
+    [data, t],
+  );
+  const hasIncomplete = !!data?.dailyVolume.some((d) => !d.complete && d.count > 0);
+  const hasTone = !!data?.sourceComparison.some((s) => s.negativeShare !== null);
+  const hasHeat = !!data?.heatmap.cells.length;
+  const hasSentiment = !!data?.sentimentIndex.length;
 
   const sentOption = useMemo(
     () =>
@@ -95,8 +157,17 @@ function Analytics() {
   const cmpOption = useMemo(
     () =>
       data && {
-        grid: { left: 44, right: 44, top: 12, bottom: 90 },
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        grid: { left: 44, right: hasTone ? 44 : 12, top: 12, bottom: 90 },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          formatter: (p: Array<{ dataIndex: number }>) => {
+            const s = data.sourceComparison[p[0]!.dataIndex]!;
+            return `${s.name}<br/><b>${num(s.count)}</b> материалов · ${s.share}% потока${
+              s.negativeShare === null ? '' : `<br/>негатива: ${s.negativeShare}%`
+            }`;
+          },
+        },
         legend: {
           bottom: 0,
           icon: 'circle',
@@ -118,15 +189,19 @@ function Analytics() {
             nameTextStyle: { color: t.muted, fontSize: 10 },
             ...axisStyle(t),
           },
-          {
-            type: 'value',
-            name: '% негатива',
-            min: 0,
-            max: 60,
-            nameTextStyle: { color: t.muted, fontSize: 10 },
-            ...axisStyle(t),
-            splitLine: { show: false },
-          },
+          ...(hasTone
+            ? [
+                {
+                  type: 'value',
+                  name: '% негатива',
+                  min: 0,
+                  max: 60,
+                  nameTextStyle: { color: t.muted, fontSize: 10 },
+                  ...axisStyle(t),
+                  splitLine: { show: false },
+                },
+              ]
+            : []),
         ],
         series: [
           {
@@ -135,16 +210,20 @@ function Analytics() {
             data: data.sourceComparison.map((s) => s.count),
             itemStyle: { color: t.dark ? '#6d93ff' : '#0f172a', borderRadius: [4, 4, 0, 0] },
           },
-          {
-            name: 'Доля негатива, %',
-            type: 'bar',
-            yAxisIndex: 1,
-            data: data.sourceComparison.map((s) => s.negativeShare),
-            itemStyle: { color: '#f59e0b', borderRadius: [4, 4, 0, 0] },
-          },
+          ...(hasTone
+            ? [
+                {
+                  name: 'Доля негатива, %',
+                  type: 'bar',
+                  yAxisIndex: 1,
+                  data: data.sourceComparison.map((s) => s.negativeShare),
+                  itemStyle: { color: '#f59e0b', borderRadius: [4, 4, 0, 0] },
+                },
+              ]
+            : []),
         ],
       },
-    [data, t],
+    [data, t, hasTone],
   );
 
   const hoursOption = useMemo(() => {
@@ -182,38 +261,32 @@ function Analytics() {
   const heatMax = Math.max(1, ...(data?.heatmap.cells.map((c) => c.count) ?? [1]));
   const wordMax = data?.words[0]?.count ?? 1;
 
+  const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
   const kpis = data
     ? [
         {
           label: 'Охват публикаций',
           value: num(data.kpis.articles),
-          hint: `за ${range === '7d' ? '7' : range === '30d' ? '30' : '90'} дней`,
+          hint: `за ${days} дней`,
           color: '#3363ff',
         },
         {
-          label: 'Средний скор тональности',
-          value: sentimentScore(data.kpis.avgSentiment),
-          hint:
-            data.kpis.avgSentiment === null
-              ? ''
-              : data.kpis.avgSentiment > 0.1
-                ? 'умеренно позитивный фон'
-                : data.kpis.avgSentiment < -0.1
-                  ? 'негативный фон'
-                  : 'нейтральный фон',
+          label: 'Источников в потоке',
+          value: num(data.kpis.sources),
+          hint: 'дали материалы за период',
           color: '#059669',
         },
         {
-          label: 'Уникальных персон',
-          value: num(data.kpis.uniquePersons),
-          hint: 'упомянуто в материалах',
+          label: 'В среднем в сутки',
+          value: data.kpis.perDay === null ? '—' : num(data.kpis.perDay),
+          hint: data.kpis.perDay === null ? 'считается по полным суткам сбора' : 'по полным суткам сбора',
           color: '#8b5cf6',
         },
         {
-          label: 'Критических материалов',
-          value: num(data.kpis.critical),
-          hint: 'тональность «критично»',
-          color: '#e11d48',
+          label: 'За последние 24 часа',
+          value: num(data.kpis.last24h),
+          hint: 'материалов',
+          color: '#f59e0b',
         },
       ]
     : [];
@@ -262,73 +335,101 @@ function Analytics() {
           </div>
           <div className="mb-4 grid gap-4 xl:grid-cols-2">
             <Card className="p-5">
+              <h2 className="text-[15px] font-bold">Публикации по суткам</h2>
+              <p className="mb-4 text-[12px] text-muted">
+                Число материалов в сутки · часовой пояс тенанта; красным отмечены всплески
+              </p>
+              <Chart option={dailyOption!} height={270} label="Столбчатая диаграмма: публикации по суткам" />
+              {hasIncomplete && (
+                <p className="mt-3 text-[11.5px] leading-relaxed text-faint">
+                  Бледные столбцы — сутки, когда сбор ещё не шёл: источники отдают только последние записи,
+                  поэтому данных там меньше, чем было на самом деле. Всплески ищутся только по полным суткам.
+                </p>
+              )}
+            </Card>
+            <Card className="p-5">
+              <h2 className="text-[15px] font-bold">Сравнение источников</h2>
+              <p className="mb-4 text-[12px] text-muted">
+                Объём публикаций{hasTone ? ' и доля негатива' : ''}; в подсказке — доля общего потока
+              </p>
+              <Chart
+                option={cmpOption!}
+                height={270}
+                label={`Сравнение источников: объём${hasTone ? ' и доля негатива' : ''}`}
+              />
+            </Card>
+          </div>
+          {hasSentiment ? (
+            <Card className="mb-4 p-5">
               <h2 className="text-[15px] font-bold">Индекс тональности во времени</h2>
               <p className="mb-4 text-[12px] text-muted">
                 Средний скор −1…+1 по дням · скользящее среднее за 3 дня
               </p>
               <Chart option={sentOption!} height={270} label="Линейный график индекса тональности" />
             </Card>
-            <Card className="p-5">
-              <h2 className="text-[15px] font-bold">Сравнение источников</h2>
-              <p className="mb-4 text-[12px] text-muted">Объём публикаций и доля негатива</p>
-              <Chart option={cmpOption!} height={270} label="Сравнение источников: объём и доля негатива" />
-            </Card>
-          </div>
+          ) : (
+            <p className="mb-4 rounded-xl border border-dashed border-line px-4 py-3 text-[12.5px] text-muted">
+              Индекс тональности и тепловая карта «тема × источник» появятся после Фазы 3: для них нужно,
+              чтобы система сама определяла тональность и тему материалов.
+            </p>
+          )}
           <div className="mb-4 grid gap-4 xl:grid-cols-3">
-            <Card className="p-5 xl:col-span-2">
-              <h2 className="text-[15px] font-bold">Тепловая карта «тема × источник»</h2>
-              <p className="mb-4 text-[12px] text-muted">Число материалов по теме в источнике</p>
-              <div className="overflow-x-auto">
-                <table className="border-separate border-spacing-0.5">
-                  <thead>
-                    <tr>
-                      <th className="pr-2 pb-1 text-left text-[11px] font-bold uppercase tracking-wider text-faint">
-                        Тема \ Источник
-                      </th>
-                      {data.heatmap.cols.map((c) => (
-                        <th
-                          key={c.id}
-                          className="h-28 px-0.5 pb-1 align-bottom text-[11px] font-semibold text-muted"
-                          title={c.name}
-                        >
-                          <div className="mx-auto max-h-28 truncate whitespace-nowrap [writing-mode:vertical-rl] rotate-180">
-                            {c.domain}
-                          </div>
+            {hasHeat && (
+              <Card className="p-5 xl:col-span-2">
+                <h2 className="text-[15px] font-bold">Тепловая карта «тема × источник»</h2>
+                <p className="mb-4 text-[12px] text-muted">Число материалов по теме в источнике</p>
+                <div className="overflow-x-auto">
+                  <table className="border-separate border-spacing-0.5">
+                    <thead>
+                      <tr>
+                        <th className="pr-2 pb-1 text-left text-[11px] font-bold uppercase tracking-wider text-faint">
+                          Тема \ Источник
                         </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.heatmap.rows.map((r) => (
-                      <tr key={r.key}>
-                        <td className="whitespace-nowrap pr-2 text-[12px] font-semibold">
-                          <span
-                            className="mr-1.5 inline-block size-2 rounded-sm"
-                            style={{ background: r.color }}
-                          />
-                          {r.name}
-                        </td>
-                        {data.heatmap.cols.map((c) => {
-                          const v = cell(r.key, c.id);
-                          return (
-                            <td key={c.id} className="p-0">
-                              <div
-                                className="grid h-8 min-w-8 place-items-center rounded font-mono text-[11px] font-bold transition hover:scale-105"
-                                style={heatStyle(v, heatMax)}
-                                title={`${r.name} · ${c.domain}: ${v}`}
-                              >
-                                {v || ''}
-                              </div>
-                            </td>
-                          );
-                        })}
+                        {data.heatmap.cols.map((c) => (
+                          <th
+                            key={c.id}
+                            className="h-28 px-0.5 pb-1 align-bottom text-[11px] font-semibold text-muted"
+                            title={c.name}
+                          >
+                            <div className="mx-auto max-h-28 truncate whitespace-nowrap [writing-mode:vertical-rl] rotate-180">
+                              {c.domain}
+                            </div>
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-            <Card className="p-5">
+                    </thead>
+                    <tbody>
+                      {data.heatmap.rows.map((r) => (
+                        <tr key={r.key}>
+                          <td className="whitespace-nowrap pr-2 text-[12px] font-semibold">
+                            <span
+                              className="mr-1.5 inline-block size-2 rounded-sm"
+                              style={{ background: r.color }}
+                            />
+                            {r.name}
+                          </td>
+                          {data.heatmap.cols.map((c) => {
+                            const v = cell(r.key, c.id);
+                            return (
+                              <td key={c.id} className="p-0">
+                                <div
+                                  className="grid h-8 min-w-8 place-items-center rounded font-mono text-[11px] font-bold transition hover:scale-105"
+                                  style={heatStyle(v, heatMax)}
+                                  title={`${r.name} · ${c.domain}: ${v}`}
+                                >
+                                  {v || ''}
+                                </div>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            )}
+            <Card className={hasHeat ? 'p-5' : 'p-5 xl:col-span-3'}>
               <h2 className="text-[15px] font-bold">Облако тем</h2>
               <p className="mb-4 text-[12px] text-muted">Частотный анализ заголовков</p>
               <div
@@ -362,7 +463,7 @@ function Analytics() {
             <Card className="p-5">
               <h2 className="mb-1 text-[15px] font-bold">Наблюдения за период</h2>
               <p className="mb-4 text-[12px] text-muted">
-                Формируются автоматически по правилам; числа считаются по данным, AI-пояснения — Фаза 3
+                Формируются автоматически по правилам; числа считаются по данным, AI-пояснения — Фаза 5
               </p>
               <ul className="space-y-3">
                 {data.insights.map((i) => (

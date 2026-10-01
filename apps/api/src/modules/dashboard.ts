@@ -5,12 +5,19 @@ import { SENTIMENT_KEYS, SENTIMENTS, type SentimentLabel } from '@mediaradar/cor
 import type { Queryable } from '@mediaradar/db';
 import { ARTICLE_FROM, buildArticleWhere, tenantTz } from '../lib/content';
 import { camelAll, rangeBounds, rangeSchema } from '../lib/http';
+import { detectSpikes } from '../lib/spikes';
 import { requireAuth, tctx, type Access, type AuthContext } from '../plugins/auth';
 
 /** Изменение к прошлому периоду. Если в прошлом периоде мало данных (сбор только начался), сравнение не показываем. */
 const MIN_PREV_FOR_DELTA = 30;
 const pct = (cur: number, prev: number): number | null =>
   prev < MIN_PREV_FOR_DELTA ? null : Math.round(((cur - prev) / prev) * 1000) / 10;
+/** Цвета рядов, когда график строится по источникам (тем у материалов ещё нет). */
+const SERIES_COLORS = ['#3363ff', '#059669', '#f59e0b', '#8b5cf6', '#e11d48', '#94a3b8'];
+/** Основы слов, которые не говорят о теме: названия месяцев, регион и страна (они есть почти в каждом заголовке). */
+const STOPSTEMS = new Set(
+  'январ февра марта апрел мая июня июля авгус сентя октяб ноябр декаб алтай росси крае'.split(' '),
+);
 const STOPWORDS = new Set(
   'который которая которое которые также после перед между более менее этого этой этих этот эта или как для при над под про его ещё еще был была были будет будут может могут чтобы если когда только очень всех всем свои своих свой края краю краем регион региона регионе регионы'.split(
     ' ',
@@ -141,6 +148,46 @@ export async function dashboardRoutes(app: FastifyInstance, access: Access): Pro
             })
             .filter((s) => s.data.some((x) => x > 0));
 
+          // темы определяет Фаза 3; пока их нет, показываем динамику по самым крупным источникам, остальные — «Прочие»
+          let volumeBy: 'topic' | 'source' = 'topic';
+          if (!series.length) {
+            volumeBy = 'source';
+            const bySource = await periodQuery<{ label: string; id: string; name: string; n: number }>(
+              q,
+              a,
+              from,
+              to,
+              `to_char(date_trunc('${bucket}', a.published_at AT TIME ZONE {1}), 'YYYY-MM-DD"T"HH24:MI') AS label, s.id, s.name, count(*)::int AS n`,
+              'GROUP BY 1, 2, 3',
+              [tz],
+            );
+            const totals = new Map<string, { name: string; n: number }>();
+            for (const v of bySource) {
+              const t = totals.get(v.id) ?? totals.set(v.id, { name: v.name, n: 0 }).get(v.id)!;
+              t.n += v.n;
+            }
+            const top = [...totals].sort((x, y) => y[1].n - x[1].n).slice(0, 5);
+            const rows = top.map(([id, t], i) => ({
+              key: id,
+              name: t.name,
+              color: SERIES_COLORS[i]!,
+              data: labels.map(() => 0),
+            }));
+            const other = {
+              key: 'other',
+              name: 'Прочие',
+              color: SERIES_COLORS[5]!,
+              data: labels.map(() => 0),
+            };
+            for (const v of bySource) {
+              const i = idx.get(v.label);
+              if (i === undefined) continue;
+              (rows.find((r) => r.key === v.id) ?? other).data[i]! += v.n;
+            }
+            series.push(...rows);
+            if (other.data.some((x) => x > 0)) series.push(other);
+          }
+
           const topSources = await periodQuery(
             q,
             a,
@@ -189,6 +236,7 @@ export async function dashboardRoutes(app: FastifyInstance, access: Access): Pro
             sentCounts,
             labels,
             series,
+            volumeBy,
             topSources,
             places,
             persons,
@@ -255,7 +303,7 @@ export async function dashboardRoutes(app: FastifyInstance, access: Access): Pro
             share: sentTotal ? Math.round((data.sentCounts[key] / sentTotal) * 1000) / 10 : 0,
           })),
         },
-        volume: { labels: data.labels, series: data.series },
+        volume: { by: data.volumeBy, labels: data.labels, series: data.series },
         topSources: data.topSources,
         geo: { places: data.places, total: data.places.reduce((s, p) => s + (p.count as number), 0) },
         persons: { top: data.persons, total: data.personsTotal },
@@ -284,13 +332,20 @@ export async function dashboardRoutes(app: FastifyInstance, access: Access): Pro
       return db.tenant(
         tctx(req),
         async (q) => {
-          const kpiRows = await periodQuery<{ articles: number; avg_score: number | null; critical: number }>(
+          const kpiRows = await periodQuery<{
+            articles: number;
+            avg_score: number | null;
+            critical: number;
+            sources: number;
+            last24h: number;
+          }>(
             q,
             a,
             from,
             to,
-            "count(*)::int AS articles, avg(a.sentiment_score)::float AS avg_score, count(*) FILTER (WHERE a.sentiment_label = 'VN')::int AS critical",
+            "count(*)::int AS articles, avg(a.sentiment_score)::float AS avg_score, count(*) FILTER (WHERE a.sentiment_label = 'VN')::int AS critical, count(DISTINCT a.source_id)::int AS sources, count(*) FILTER (WHERE a.published_at >= {1})::int AS last24h",
             '',
+            [new Date(to.getTime() - 864e5)],
           );
           const pw = buildArticleWhere({ from, to }, a);
           const uniquePersons = (
@@ -299,6 +354,51 @@ export async function dashboardRoutes(app: FastifyInstance, access: Access): Pro
               pw.params,
             )
           ).rows[0]!.n;
+
+          // публикации по суткам (часовой пояс тенанта) и всплески. До начала сбора лента источника отдаёт лишь последние записи,
+          // поэтому сутки до первого сбора неполные: они не служат эталоном и в «среднем в сутки» не участвуют.
+          const dayLabels = (
+            await q.query<{ d: string }>(
+              `SELECT to_char(b, 'YYYY-MM-DD') AS d FROM generate_series(date_trunc('day', $1::timestamptz AT TIME ZONE $3), date_trunc('day', $2::timestamptz AT TIME ZONE $3), '1 day'::interval) AS b ORDER BY b`,
+              [from, to, tz],
+            )
+          ).rows.map((x) => x.d);
+          const dayRows = await periodQuery<{ d: string; n: number }>(
+            q,
+            a,
+            from,
+            to,
+            "to_char(date_trunc('day', a.published_at AT TIME ZONE {1}), 'YYYY-MM-DD') AS d, count(*)::int AS n",
+            'GROUP BY 1',
+            [tz],
+          );
+          const dayCount = new Map(dayRows.map((x) => [x.d, x.n]));
+          const dayCounts = dayLabels.map((d) => dayCount.get(d) ?? 0);
+          const cw = buildArticleWhere({}, a);
+          const firstFetch = (
+            await q.query<{ d: string | null }>(
+              `SELECT to_char(min(a.fetched_at) AT TIME ZONE $${cw.params.length + 1}, 'YYYY-MM-DD') AS d ${ARTICLE_FROM} WHERE ${cw.sql}`,
+              [...cw.params, tz],
+            )
+          ).rows[0]!.d;
+          // сутки сбора с полными данными начинаются со следующего дня после первого сбора
+          const reliableFrom = firstFetch ? dayLabels.findIndex((d) => d > firstFetch) : -1;
+          const todayIdx = dayLabels.length - 1;
+          const spikes = detectSpikes(
+            dayCounts,
+            reliableFrom < 0 ? dayCounts.length : reliableFrom,
+            todayIdx,
+          );
+          const fullDays = reliableFrom < 0 ? [] : dayCounts.slice(reliableFrom, todayIdx);
+          const perDay = fullDays.length
+            ? Math.round(fullDays.reduce((s, x) => s + x, 0) / fullDays.length)
+            : null;
+          const dailyVolume = dayLabels.map((date, i) => ({
+            date,
+            count: dayCounts[i]!,
+            complete: reliableFrom >= 0 && i >= reliableFrom && i < todayIdx,
+            spike: spikes.some((sp) => sp.index === i),
+          }));
 
           // индекс тональности по дням (+ скользящее среднее за 3 дня)
           const daily = await periodQuery<{ d: string; score: number; n: number }>(
@@ -326,14 +426,14 @@ export async function dashboardRoutes(app: FastifyInstance, access: Access): Pro
             name: string;
             domain: string;
             count: number;
-            negative_share: number;
+            negative_share: number | null;
             trust: number;
           }>(
             q,
             a,
             from,
             to,
-            "s.id, s.name, s.domain, count(*)::int AS count, round(100.0 * count(*) FILTER (WHERE a.sentiment_label IN ('NG','VN')) / count(*), 1)::float AS negative_share, s.trust_score AS trust",
+            "s.id, s.name, s.domain, count(*)::int AS count, round(100.0 * count(*) FILTER (WHERE a.sentiment_label IN ('NG','VN')) / nullif(count(*) FILTER (WHERE a.sentiment_label IS NOT NULL), 0), 1)::float AS negative_share, s.trust_score AS trust",
             'GROUP BY s.id, s.name, s.domain, s.trust_score ORDER BY count DESC LIMIT 9',
           );
 
@@ -378,8 +478,8 @@ export async function dashboardRoutes(app: FastifyInstance, access: Access): Pro
           const groups = new Map<string, Map<string, number>>();
           for (const { title } of titles)
             for (const w of title.toLowerCase().match(/[а-яёa-z]{4,}/g) ?? []) {
-              if (STOPWORDS.has(w)) continue;
               const stem = w.slice(0, 5);
+              if (STOPWORDS.has(w) || STOPSTEMS.has(stem)) continue;
               const g = groups.get(stem) ?? groups.set(stem, new Map()).get(stem)!;
               g.set(w, (g.get(w) ?? 0) + 1);
             }
@@ -448,6 +548,14 @@ export async function dashboardRoutes(app: FastifyInstance, access: Access): Pro
               title: `Негативный фон по теме «${neg.t.name}»`,
               text: `Доля негатива — ${Math.round(neg.share * 100)}% (${neg.t.neg} из ${neg.t.n} материалов). Рассмотрите алерт по этой теме.`,
             });
+          const lastSpike = spikes[spikes.length - 1];
+          if (lastSpike)
+            insights.push({
+              kind: 'всплеск',
+              color: '#e11d48',
+              title: `Всплеск публикаций: ${new Date(`${dayLabels[lastSpike.index]}T12:00:00Z`).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', timeZone: 'UTC' })}`,
+              text: `Вышло ${lastSpike.count} материалов при обычных около ${lastSpike.baseline} в сутки. Откройте ленту за этот день, чтобы увидеть, что стало поводом.`,
+            });
           const lead = sources[0];
           if (lead)
             insights.push({
@@ -480,9 +588,18 @@ export async function dashboardRoutes(app: FastifyInstance, access: Access): Pro
               avgSentiment: kp.avg_score === null ? null : round(kp.avg_score),
               uniquePersons,
               critical: kp.critical,
+              sources: kp.sources,
+              last24h: kp.last24h,
+              perDay,
             },
+            dailyVolume,
             sentimentIndex,
-            sourceComparison: camelAll(sources),
+            sourceComparison: camelAll(
+              sources.map((x) => ({
+                ...x,
+                share: kp.articles ? Math.round((x.count / kp.articles) * 1000) / 10 : 0,
+              })),
+            ),
             heatmap: {
               rows: topics,
               cols: topCols.map((c) => ({ id: c.id, domain: c.domain, name: c.name })),

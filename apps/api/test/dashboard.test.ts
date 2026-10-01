@@ -15,7 +15,7 @@ afterAll(() => ctx.close());
 interface Dash {
   kpis: Array<{ key: string; value: number; delta: number | null; spark: number[] | null }>;
   sentiment: { total: number; items: Array<{ key: string; count: number; share: number }> };
-  volume: { labels: string[]; series: Array<{ key: string; data: number[] }> };
+  volume: { by: 'topic' | 'source'; labels: string[]; series: Array<{ key: string; data: number[] }> };
   topSources: Array<{ name: string; count: number }>;
   geo: { places: Array<{ name: string; count: number }>; total: number };
   persons: { top: Array<{ name: string; count: number }>; total: number };
@@ -78,6 +78,7 @@ describe('дашборд', () => {
     expect(d.geo.places[0]!.name).toBe('Барнаул');
     expect(d.persons.top.length).toBeGreaterThan(0);
     expect(d.persons.top.length).toBeLessThanOrEqual(7);
+    expect(d.volume.by).toBe('topic'); // в демо у материалов есть темы
     // состояние парсеров согласовано с реестром источников (число может расти, если другие тесты добавили приватные источники)
     const registry = (await owner.get('/v1/sources'))
       .json<{ items: Array<{ enabled: boolean; status: string }> }>()
@@ -107,9 +108,24 @@ describe('дашборд', () => {
 
 describe('аналитика', () => {
   interface Overview {
-    kpis: { articles: number; avgSentiment: number | null; uniquePersons: number; critical: number };
+    kpis: {
+      articles: number;
+      avgSentiment: number | null;
+      uniquePersons: number;
+      critical: number;
+      sources: number;
+      last24h: number;
+      perDay: number | null;
+    };
+    dailyVolume: Array<{ date: string; count: number; complete: boolean; spike: boolean }>;
     sentimentIndex: Array<{ date: string; score: number; average: number }>;
-    sourceComparison: Array<{ id: string; count: number; negativeShare: number; trust: number }>;
+    sourceComparison: Array<{
+      id: string;
+      count: number;
+      share: number;
+      negativeShare: number | null;
+      trust: number;
+    }>;
     heatmap: {
       rows: Array<{ key: string }>;
       cols: Array<{ id: string }>;
@@ -147,6 +163,28 @@ describe('аналитика', () => {
     expect(a.words.every((w) => w.word.length >= 4)).toBe(true);
     const counts = a.words.map((w) => w.count);
     expect([...counts].sort((x, y) => y - x)).toEqual(counts);
+  });
+
+  it('публикации по суткам, показатели потока и доли источников согласованы с общим числом', async () => {
+    const a = (await owner.get('/v1/analytics/overview?range=30d')).json<Overview>();
+    const dates = a.dailyVolume.map((d) => d.date);
+    expect(dates).toEqual([...dates].sort());
+    expect(new Set(dates).size).toBe(dates.length); // сутки без пропусков и повторов
+    expect(a.dailyVolume.length).toBeGreaterThanOrEqual(30);
+    expect(a.dailyVolume.length).toBeLessThanOrEqual(31);
+    // сумма по суткам = всего за период (допуск: граница «сейчас» сдвигается между запросами)
+    const sum = a.dailyVolume.reduce((s, d) => s + d.count, 0);
+    expect(Math.abs(sum - a.kpis.articles)).toBeLessThanOrEqual(2);
+    expect(a.dailyVolume[a.dailyVolume.length - 1]!.complete).toBe(false); // текущие сутки не закончились
+    expect(a.kpis.sources).toBeGreaterThan(0);
+    expect(a.kpis.sources).toBeLessThanOrEqual(a.sourceComparison.length + 20);
+    expect(a.kpis.last24h).toBeGreaterThanOrEqual(0);
+    expect(a.kpis.last24h).toBeLessThanOrEqual(a.kpis.articles);
+    expect(a.kpis.perDay === null || a.kpis.perDay >= 0).toBe(true);
+    const shares = a.sourceComparison.reduce((s, x) => s + x.share, 0);
+    expect(shares).toBeGreaterThan(0);
+    expect(shares).toBeLessThanOrEqual(100.5);
+    for (const sp of a.dailyVolume.filter((d) => d.spike)) expect(sp.complete).toBe(true);
   });
 
   it('тепловая карта и наблюдения построены по данным', async () => {
