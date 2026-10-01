@@ -1,0 +1,166 @@
+import type { SourceKind, Parser, SourceStatus, TopicKey } from '@mediaradar/core';
+
+/** Ядро-территория тенанта и её окружение. Координаты приблизительные (для демо-карты). */
+export const ALTAI_CITIES: Array<[string, number, number, number]> = [
+  ['Барнаул', 53.3606, 83.7636, 630000],
+  ['Бийск', 52.5393, 85.2139, 197000],
+  ['Рубцовск', 51.5012, 81.2078, 142000],
+  ['Новоалтайск', 53.3959, 83.9366, 75000],
+  ['Заринск', 53.7064, 84.9306, 47000],
+  ['Алейск', 52.4919, 82.7794, 27000],
+  ['Славгород', 52.9994, 78.6458, 28000],
+  ['Яровое', 52.9253, 78.5736, 17000],
+  ['Белокуриха', 51.9969, 84.9922, 14000],
+];
+
+export const ALTAI_DISTRICTS = [
+  'Благовещенский район', 'Павловский район', 'Ребрихинский район', 'Мамонтовский район', 'Шипуновский район',
+  'Тальменский район', 'Первомайский район', 'Калманский район', 'Зональный район', 'Косихинский район',
+  'Егорьевский район', 'Волчихинский район', 'Третьяковский район', 'Угловский район', 'Советский район',
+  'Усть-Калманский район', 'Красногорский район', 'Солонешенский район', 'Чарышский район',
+  'Быстроистокский район', 'Панкрушихинский район', 'Хабарский район', 'Родинский район',
+  'Новичихинский район', 'Петровский район', 'Топчихинский район', 'Крутихинский район', 'Тюменцевский район',
+];
+
+export interface SourceSeed {
+  name: string; domain: string; kind: SourceKind; parser: Parser; cron: string; status: SourceStatus;
+  lastMin: number; errs: number; city: string | null; topic: TopicKey; trust: number; weight: number;
+  /** Подписан ли демо-тенант «Республика Алтай» на этот общий источник. */
+  sharedWithRepublic?: boolean;
+}
+
+/**
+ * Список 18 источников из прототипа. ВАЖНО: это ПЛЕЙСХОЛДЕРЫ — домены и названия не проверены
+ * (см. PLAN §7 и PRODUCT_SPEC §11.3). В БД помечаются meta.demo = true.
+ */
+export const SOURCES: SourceSeed[] = [
+  { name: 'Официальный портал Алтайского края', domain: 'altairegion22.ru', kind: 'GOV_PORTAL', parser: 'PLAYWRIGHT', cron: '*/15 * * * *', status: 'active', lastMin: 4, errs: 0, city: 'Барнаул', topic: 'gov', trust: 96, weight: 14, sharedWithRepublic: true },
+  { name: 'Администрация города Барнаула', domain: 'barnaul.org', kind: 'GOV_PORTAL', parser: 'PLAYWRIGHT', cron: '*/15 * * * *', status: 'active', lastMin: 7, errs: 0, city: 'Барнаул', topic: 'city', trust: 94, weight: 9 },
+  { name: 'Алтайская правда', domain: 'altapress.ru', kind: 'NEWS_SITE', parser: 'PLAYWRIGHT', cron: '*/10 * * * *', status: 'active', lastMin: 2, errs: 0, city: 'Барнаул', topic: 'soc', trust: 88, weight: 22 },
+  { name: 'Катунь 24', domain: 'katun24.ru', kind: 'NEWS_SITE', parser: 'PLAYWRIGHT', cron: '*/10 * * * *', status: 'active', lastMin: 3, errs: 0, city: 'Барнаул', topic: 'soc', trust: 85, weight: 19 },
+  { name: 'Банкфакт', domain: 'bankfax.ru', kind: 'NEWS_SITE', parser: 'RSS', cron: '*/20 * * * *', status: 'active', lastMin: 11, errs: 0, city: 'Барнаул', topic: 'econ', trust: 82, weight: 15 },
+  { name: 'АМИ-ТАСС (лента Сибири)', domain: 'tass.ru', kind: 'NEWS_SITE', parser: 'RSS', cron: '*/10 * * * *', status: 'active', lastMin: 6, errs: 0, city: null, topic: 'soc', trust: 90, weight: 9, sharedWithRepublic: true },
+  { name: 'Минсельхоз Алтайского края', domain: 'altagro.ru', kind: 'GOV_PORTAL', parser: 'PLAYWRIGHT', cron: '0 * * * *', status: 'active', lastMin: 38, errs: 0, city: 'Барнаул', topic: 'agro', trust: 95, weight: 5 },
+  { name: 'Алтайкрайстат', domain: '22.rosstat.gov.ru', kind: 'GOV_PORTAL', parser: 'PLAYWRIGHT', cron: '0 */6 * * *', status: 'active', lastMin: 210, errs: 0, city: 'Барнаул', topic: 'econ', trust: 98, weight: 3 },
+  { name: 'Telegram · Барнаул LIVE', domain: 't.me/barnaul_live', kind: 'TELEGRAM', parser: 'TELEGRAM_BOT', cron: '* * * * *', status: 'active', lastMin: 1, errs: 0, city: 'Барнаул', topic: 'city', trust: 61, weight: 13 },
+  { name: 'Telegram · АгроАлтай', domain: 't.me/agroaltai', kind: 'TELEGRAM', parser: 'TELEGRAM_BOT', cron: '*/5 * * * *', status: 'active', lastMin: 2, errs: 0, city: null, topic: 'agro', trust: 64, weight: 5 },
+  { name: 'Топливный портал Алтая', domain: 'fuel22.ru', kind: 'NEWS_SITE', parser: 'CHEERIO', cron: '0 */2 * * *', status: 'active', lastMin: 74, errs: 0, city: null, topic: 'fuel', trust: 70, weight: 4 },
+  { name: 'VK · Новости Бийска', domain: 'vk.com/biysk_news', kind: 'VK', parser: 'VK_API', cron: '*/15 * * * *', status: 'active', lastMin: 9, errs: 0, city: 'Бийск', topic: 'city', trust: 58, weight: 8 },
+  { name: 'Бийский рабочий', domain: 'biysk22.ru', kind: 'NEWS_SITE', parser: 'PLAYWRIGHT', cron: '0 * * * *', status: 'error', lastMin: 190, errs: 6, city: 'Бийск', topic: 'soc', trust: 74, weight: 3 },
+  { name: 'Рубцовск-онлайн', domain: 'rubtsovsk.online', kind: 'NEWS_SITE', parser: 'PLAYWRIGHT', cron: '0 */2 * * *', status: 'active', lastMin: 52, errs: 0, city: 'Рубцовск', topic: 'city', trust: 66, weight: 4 },
+  { name: 'Заринск.ру', domain: 'zarinsk.ru', kind: 'NEWS_SITE', parser: 'RSS', cron: '0 */3 * * *', status: 'paused', lastMin: 4100, errs: 0, city: 'Заринск', topic: 'city', trust: 60, weight: 2 },
+  { name: 'Пищевая промышленность Сибири', domain: 'foodprom.ru', kind: 'NEWS_SITE', parser: 'CHEERIO', cron: '0 */4 * * *', status: 'active', lastMin: 126, errs: 0, city: null, topic: 'food', trust: 72, weight: 3 },
+  { name: 'YouTube · Регион 22', domain: 'youtube.com/@reg22', kind: 'YOUTUBE', parser: 'YOUTUBE_API', cron: '0 * * * *', status: 'active', lastMin: 22, errs: 0, city: 'Барнаул', topic: 'soc', trust: 78, weight: 2 },
+  { name: 'Форум «Алтайские соседи»', domain: 'forum-altai.ru', kind: 'FORUM', parser: 'PLAYWRIGHT', cron: '0 */6 * * *', status: 'active', lastMin: 31, errs: 1, city: null, topic: 'soc', trust: 35, weight: 8 },
+];
+
+export const REPUBLIC_SOURCES: SourceSeed[] = [
+  { name: 'Республика Алтай: официальный портал', domain: 'altai-republic.ru', kind: 'GOV_PORTAL', parser: 'PLAYWRIGHT', cron: '*/15 * * * *', status: 'active', lastMin: 8, errs: 0, city: 'Горно-Алтайск', topic: 'gov', trust: 95, weight: 10 },
+  { name: 'Эл-Алтай (демо)', domain: 'el-altai.example', kind: 'NEWS_SITE', parser: 'RSS', cron: '*/20 * * * *', status: 'active', lastMin: 12, errs: 0, city: 'Горно-Алтайск', topic: 'soc', trust: 75, weight: 8 },
+  { name: 'Telegram · Горный Алтай (демо)', domain: 't.me/gorny_altai_demo', kind: 'TELEGRAM', parser: 'TELEGRAM_BOT', cron: '*/5 * * * *', status: 'active', lastMin: 3, errs: 0, city: 'Горно-Алтайск', topic: 'city', trust: 55, weight: 6 },
+];
+
+export const PRIVATE_SOURCE: SourceSeed = {
+  name: 'Закрытая рассылка клиента (демо)', domain: 'private-feed.example', kind: 'NEWS_SITE', parser: 'RSS', cron: '0 * * * *',
+  status: 'active', lastMin: 20, errs: 0, city: 'Горно-Алтайск', topic: 'econ', trust: 50, weight: 1,
+};
+
+/** Шаблоны заголовков по темам; {n}, {pct}, {city}, {district} подставляются генератором. */
+export const TITLES: Record<TopicKey, string[]> = {
+  agro: [
+    'Аграрии {district} намолотили более {n} тыс. тонн зерна нового урожая',
+    'В крае стартовала программа субсидирования покупки сельхозтехники на 2027 год',
+    'Экспорт алтайской пшеницы в Центральную Азию вырос на {pct}% за полугодие',
+    'Погодные аномалии августа снизили урожайность гречихи в {district}',
+    'Молочные фермы региона выходят на рекордные надои за последние пять лет',
+    'Фермеры {district} запустили кооператив по переработке льна',
+    'Цены на семена подсолнечника выросли на {pct}% перед посевной',
+  ],
+  fuel: [
+    'Крупные сетевики региона заявили о стабилизации розничных цен на бензин АИ-95',
+    'Модернизация нефтебазы под Барнаулом завершится в первом квартале 2027 года',
+    'Дефицит дизтоплива в {district} снят после перераспределения поставок',
+    'Алтайский край вошёл в пилот по развитию сети газомоторных заправок',
+    'Цены на дизельное топливо в {city} выросли на {pct}% за неделю',
+    'АЗС в {district} жалуются на перебои с поставками бензина',
+  ],
+  gov: [
+    'Правительство региона утвердило стратегию развития до 2032 года',
+    'Депутаты обсудили распределение инфраструктурных бюджетных кредитов',
+    'Запущен единый цифровой контур для муниципальных образований края',
+    'Регион привлёк {n} млрд рублей федеральных инвестиций в промышленность',
+    'В {district} назначен новый глава администрации',
+    'Бюджет края на 2027 год: приоритеты — здравоохранение и дороги',
+  ],
+  food: [
+    'Барнаульский комбинат нарастил выпуск растительного масла на {pct}%',
+    'Пищевики края выводят на рынок линейку продуктов под собственными марками',
+    'Сыровары Алтая подтвердили экспортные сертификаты для рынков Юго-Восточной Азии',
+    'Кондитерская фабрика в {city} расширяет производство на {pct}%',
+  ],
+  city: [
+    'В {city} завершили реконструкцию набережной: открыт новый участок',
+    'Городская среда: {n} дворов благоустроят по программе в следующем сезоне',
+    'Транспортная реформа: муниципалитет обновит парк автобусов на {n} единиц',
+    'ЖКХ региона готово к отопительному сезону на {pct}%, отчитались в администрации',
+    'В {city} отключат горячую воду в нескольких районах на время ремонта сетей',
+    'Жители {city} пожаловались на состояние дорог после дождей',
+    'Авария на теплотрассе в {city}: без отопления остались {n} домов',
+  ],
+  econ: [
+    'Индекс промышленного производства в крае вырос на {pct}% год к году',
+    'Малый бизнес региона получил льготные займы на {n} млрд рублей',
+    'Средняя зарплата в Алтайском крае превысила 62 тысячи рублей — Алтайкрайстат',
+    'Оборот розничной торговли в крае показал рост третий квартал подряд',
+    'Инфляция в регионе замедлилась до {pct}% в годовом выражении',
+  ],
+  soc: [
+    'В крае открыли {n} новых фельдшерско-акушерских пунктов в сёлах',
+    'Школы {city} переходят на обновлённые образовательные программы',
+    'Экологи зафиксировали снижение выбросов в промышленной зоне города',
+    'Регион примет всероссийский фестиваль народного творчества в октябре',
+    'В {district} открылся новый спортивный комплекс',
+    'Волонтёры {city} собрали помощь для сельских школ',
+  ],
+};
+
+export const BODIES = [
+  'По данным профильного ведомства, показатель превысил плановые значения. Эксперты связывают динамику с реализацией профильных программ и расширением производственных мощностей. В ближайшие месяцы ожидается сохранение положительного тренда при условии стабильного финансирования.',
+  'Как сообщили в пресс-службе, работа велась совместно с муниципальными образованиями. Отдельное внимание уделено логистике и срокам. Представители отраслевого сообщества оценили результаты как умеренно позитивные, отметив необходимость дальнейшего сопровождения.',
+  'Ситуация обсуждалась на заседании рабочей группы. Участники указали на накопившиеся проблемы и предложили план их устранения. Контроль исполнения закреплён за профильным департаментом, первый отчёт ожидается до конца квартала.',
+  'Аналитики отмечают, что регион демонстрирует устойчивые показатели на фоне общероссийской динамики. Ключевым драйвером остаётся внутренний спрос. Риски связаны с сезонностью и зависимостью от внешних поставок отдельных комплектующих.',
+];
+
+export const PERSONS = ['А. Соколов', 'И. Волков', 'В. Петров', 'Д. Кузнецов', 'М. Орлова', 'С. Белых', 'Е. Морозов', 'Н. Зайцева', 'П. Гуров', 'О. Лапина'];
+export const ORGS = ['Правительство АК', 'Минсельхоз АК', 'Администрация Барнаула', 'Алтайкрайстат', 'АО «Алтай-Нефть»', 'ООО «Сибирь-Агро»', 'Минздрав АК', 'Торгово-промышленная палата'];
+
+export const HOUR_WEIGHTS = [8, 5, 4, 3, 4, 9, 22, 48, 72, 84, 76, 68, 74, 80, 71, 64, 58, 52, 44, 38, 30, 24, 18, 12];
+
+export const ALERTS = [
+  { name: 'Негатив по топливному сектору', keywords: ['дизтопливо', 'бензин', 'цены', 'дефицит'], scope: ['Все источники'], channels: ['Telegram', 'Email'], on: true, fired: 12, level: 'high' },
+  { name: 'Упоминания ключевых персон', keywords: ['губернатор', 'мэр Барнаула', 'министр'], scope: ['GOV_PORTAL', 'NEWS_SITE'], channels: ['Telegram'], on: true, fired: 34, level: 'mid' },
+  { name: 'Инвестиционные соглашения', keywords: ['инвестиции', 'соглашение', 'инвестпроект', 'млрд'], scope: ['Все источники'], channels: ['Email', 'PDF-дайджест'], on: true, fired: 8, level: 'mid' },
+  { name: 'ЖКХ и отопительный сезон', keywords: ['ЖКХ', 'отопление', 'авария', 'отключение'], scope: ['Барнаул', 'Бийск', 'Рубцовск'], channels: ['Telegram', 'SMS'], on: false, fired: 47, level: 'high' },
+  { name: 'Агро: урожай и экспорт', keywords: ['урожай', 'намолот', 'экспорт', 'зерно'], scope: ['altagro.ru', 'agroaltai'], channels: ['Email'], on: true, fired: 19, level: 'low' },
+  { name: 'Контроль репутации предприятия', keywords: ['АО «Алтай-Нефть»', 'комбинат'], scope: ['Все источники'], channels: ['Telegram', 'Email', 'SMS'], on: true, fired: 3, level: 'high' },
+] as const;
+
+export const PARSER_CONFIGS: Record<string, unknown> = {
+  PLAYWRIGHT: {
+    connector: 'html-browser',
+    list: { itemSelector: 'article, .news-item, .post', linkSelector: 'h3 a' },
+    article: { title: 'h1', body: 'article .content, .entry-content, #news_text', author: '.author, .news-author', date: { selector: 'time[datetime]', attr: 'datetime' } },
+    render: { mode: 'browser', waitForSelector: '.news-list' },
+    limits: { maxItemsPerRun: 40, timeoutMs: 20000 },
+  },
+  RSS: { connector: 'rss', feedUrl: 'auto', enclosureAsImage: true, stripHtml: true, limits: { maxItemsPerRun: 100 } },
+  CHEERIO: {
+    connector: 'html-static',
+    list: { itemSelector: '.news-item', linkSelector: 'a' },
+    article: { title: 'h1', body: '.content', date: { selector: 'time', attr: 'datetime' } },
+    render: { mode: 'static' },
+  },
+  TELEGRAM_BOT: { connector: 'telegram-web', channel: 'auto', limits: { maxItemsPerRun: 50 } },
+  VK_API: { connector: 'vk', method: 'wall.get', limits: { maxItemsPerRun: 50 } },
+  YOUTUBE_API: { connector: 'youtube', limits: { maxItemsPerRun: 20 } },
+};

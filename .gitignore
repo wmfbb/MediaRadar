@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.next/
+.turbo/
+coverage/
+.env
+.env.local
+*.log
+.pnpm-store/
+playwright-report/
+test-results/
+.DS_Store
+tmp/

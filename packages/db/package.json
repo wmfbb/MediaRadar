@@ -1,0 +1,26 @@
+{
+  "name": "@mediaradar/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "migrate": "tsx src/cli/migrate.ts",
+    "seed": "tsx src/cli/seed.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mediaradar/core": "workspace:*",
+    "@mediaradar/rbac": "workspace:*",
+    "@mediaradar/settings": "workspace:*",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "vitest": "^3.2.0"
+  }
+}
