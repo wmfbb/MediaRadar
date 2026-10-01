@@ -1,0 +1,15 @@
+.git
+.github
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/test-results
+**/playwright-report
+**/*.tsbuildinfo
+.env
+.env.*
+!.env.example
+prototype
+docs
+dump.rdb

@@ -1,0 +1,110 @@
+# Production-стек МедиаРадар на одном сервере: Caddy (HTTPS) → web + api, воркер, PostgreSQL, Redis.
+#
+#   cp deploy/.env.prod.example deploy/.env.prod   # заполните значения
+#   docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod up -d --build
+#
+# Миграции выполняются одноразовым сервисом `migrate` перед стартом api/worker.
+# Это каркас Фазы 0: он проверен только как YAML (`docker compose config`), боевой запуск — на этапе выката (Фаза 9).
+name: mediaradar
+
+x-app-env: &app-env
+  NODE_ENV: production
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  APP_BASE_URL: https://${APP_DOMAIN:?задайте APP_DOMAIN}
+  APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?задайте APP_ENCRYPTION_KEY (openssl rand -base64 32)}
+  REDIS_URL: redis://redis:6379
+  TRUST_PROXY: 'true'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mediaradar
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD}
+      POSTGRES_DB: mediaradar
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mediaradar -d mediaradar']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build: { context: .., dockerfile: deploy/docker/Dockerfile, target: migrate }
+    restart: 'no'
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      MIGRATE_DATABASE_URL: postgres://mediaradar:${POSTGRES_PASSWORD}@postgres:5432/mediaradar
+      APP_API_DB_PASSWORD: ${APP_API_DB_PASSWORD:?задайте APP_API_DB_PASSWORD}
+      APP_WORKER_DB_PASSWORD: ${APP_WORKER_DB_PASSWORD:?задайте APP_WORKER_DB_PASSWORD}
+
+  api:
+    build: { context: .., dockerfile: deploy/docker/Dockerfile, target: api }
+    restart: unless-stopped
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgres://app_api:${APP_API_DB_PASSWORD}@postgres:5432/mediaradar
+      METRICS_TOKEN: ${METRICS_TOKEN:?задайте METRICS_TOKEN}
+
+  worker:
+    build: { context: .., dockerfile: deploy/docker/Dockerfile, target: worker }
+    restart: unless-stopped
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    environment:
+      <<: *app-env
+      WORKER_DATABASE_URL: postgres://app_worker:${APP_WORKER_DB_PASSWORD}@postgres:5432/mediaradar
+      # Фаза 0: синтетический поток для демонстрации. На боевых данных выключить.
+      DEMO_LIVE: ${DEMO_LIVE:-false}
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile
+      target: web
+      args:
+        API_ORIGIN: http://api:4000
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+      - api
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:

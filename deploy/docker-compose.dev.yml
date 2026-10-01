@@ -1,0 +1,36 @@
+# Зависимости для локальной разработки: PostgreSQL 16 (+pgvector для Фазы 3) и Redis.
+# Приложения запускаются на хосте (`make dev`), а не в контейнерах.
+name: mediaradar-dev
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mediaradar
+      POSTGRES_PASSWORD: mediaradar_dev
+      POSTGRES_DB: mediaradar
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mediaradar -d mediaradar']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    ports:
+      - '127.0.0.1:6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:

@@ -1,0 +1,27 @@
+# Обратный прокси: автоматический HTTPS (Let's Encrypt) для домена из APP_DOMAIN.
+# Для проверки без домена: APP_DOMAIN=localhost (Caddy выпустит локальный сертификат).
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	# Метрики и документация API наружу не отдаём
+	# (внутри handle: блоки handle выбираются по порядку, первый подходящий выигрывает)
+	@internal path /api/metrics /api/docs /api/docs/*
+	handle @internal {
+		respond 404
+	}
+
+	# /api/* → API (префикс отрезается; WebSocket /api/v1/ws проксируется автоматически)
+	handle_path /api/* {
+		reverse_proxy api:4000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

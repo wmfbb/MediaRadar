@@ -2,7 +2,11 @@
   "$schema": "https://turborepo.com/schema.json",
   "agentGuidance": false,
   "tasks": {
-    "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".next/**", "!.next/cache/**"] },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["API_ORIGIN", "NEXT_PUBLIC_*", "NEXT_OUTPUT"]
+    },
     "dev": { "cache": false, "persistent": true },
     "lint": { "dependsOn": ["^build"] },
     "typecheck": { "dependsOn": ["^build"] },

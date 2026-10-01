@@ -6,3 +6,4 @@ coverage
 pnpm-lock.yaml
 prototype
 docs
+apps/web/next-env.d.ts

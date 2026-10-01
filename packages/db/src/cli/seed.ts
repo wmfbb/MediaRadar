@@ -16,6 +16,10 @@ await client.connect();
 try {
   const existing = await client.query('SELECT count(*)::int AS n FROM tenants');
   if (existing.rows[0].n > 0) {
+    if (args.has('--if-empty')) {
+      console.log('Демо-данные уже загружены — пропускаю (для пересоздания: make db-reset).');
+      process.exit(0);
+    }
     if (!args.has('--reset')) {
       console.error('В БД уже есть тенанты. Для пересоздания демо-данных запустите с --reset.');
       process.exit(1);

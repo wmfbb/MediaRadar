@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  check:
+    name: Проверки и тесты
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: mediaradar
+          POSTGRES_PASSWORD: mediaradar_dev
+          POSTGRES_DB: mediaradar
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U mediaradar -d mediaradar"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Форматирование
+        run: pnpm format:check
+      - name: Линтер
+        run: pnpm lint
+      - name: Типы
+        run: pnpm typecheck
+      - name: Тесты (изоляция тенантов, API, воркер, UI)
+        run: pnpm test
+      - name: Сборка
+        run: pnpm build
+
+  e2e:
+    name: E2E в браузере
+    runs-on: ubuntu-latest
+    needs: check
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: mediaradar
+          POSTGRES_PASSWORD: mediaradar_dev
+          POSTGRES_DB: mediaradar
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U mediaradar -d mediaradar"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env
+      - name: Миграции и демо-данные
+        run: |
+          set -a; source .env; set +a
+          pnpm db:migrate
+          pnpm db:seed
+      - run: pnpm build
+      - name: Запуск стека (API, воркер, портал)
+        run: |
+          set -a; source .env; set +a
+          (cd apps/api && nohup node dist/main.js > "$RUNNER_TEMP/api.log" 2>&1 &)
+          (cd apps/worker && nohup node dist/main.js > "$RUNNER_TEMP/worker.log" 2>&1 &)
+          (cd apps/web && nohup npx next start -p 3000 > "$RUNNER_TEMP/web.log" 2>&1 &)
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:4000/readyz >/dev/null && curl -fsS http://localhost:3000/login -o /dev/null; then
+              echo "стек готов"; exit 0
+            fi
+            sleep 1
+          done
+          echo "стек не поднялся"; tail -n 50 "$RUNNER_TEMP"/*.log; exit 1
+      - name: Браузер Playwright
+        run: pnpm --filter @mediaradar/web exec playwright install --with-deps chromium
+      - name: E2E-тесты
+        run: pnpm --filter @mediaradar/web exec playwright test
+        env:
+          CI: 'true'
+          E2E_LIVE: '1'
+      - name: Логи стека
+        if: failure()
+        run: tail -n 100 "$RUNNER_TEMP"/*.log
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          retention-days: 7
+
+  docker:
+    name: Docker-образы (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [api, worker, web, migrate]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          target: ${{ matrix.target }}
+          push: false
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
