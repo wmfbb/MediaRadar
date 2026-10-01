@@ -1,0 +1,1791 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Алтай.Медиа — Региональная медиа-аналитическая платформа</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.0/400.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.0/500.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.0/600.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.0/700.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.0/800.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.0/400.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.1.0/600.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
+      colors: {
+        ink: { 50:'#f5f7fa',100:'#e9edf4',200:'#d3dbe7',300:'#aebbcc',400:'#8394ab',500:'#65768f',600:'#505e75',700:'#424c5f',800:'#3a4250',900:'#0f172a' },
+        brand: { 50:'#eef4ff',100:'#dae6ff',200:'#bcd2ff',300:'#8eb4ff',400:'#598bff',500:'#3363ff',600:'#1f42f5',700:'#1a33e1',800:'#1c2cb6',900:'#1c2c8f' },
+      },
+      boxShadow: {
+        card: '0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06)',
+        pop: '0 12px 32px -8px rgba(16,24,40,.18)',
+      }
+    }
+  }
+}
+</script>
+<style>
+  * { -webkit-font-smoothing: antialiased; }
+  html, body { height: 100%; }
+  body { background: #f5f7fa; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  .dark-scroll::-webkit-scrollbar-thumb { background: #334155; }
+  .view { display: none; animation: fadeUp .28s ease both; }
+  .view.active { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: none;} }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(16px);} to { opacity: 1; transform: none;} }
+  .live-item { animation: slideIn .4s ease both; }
+  @keyframes pulseDot { 0%,100% { opacity: 1; transform: scale(1);} 50% { opacity: .35; transform: scale(.8);} }
+  .pulse-dot { animation: pulseDot 1.8s ease-in-out infinite; }
+  .nav-item.active { background: rgba(255,255,255,.08); color: #fff; }
+  .nav-item.active .nav-ico { background: #3363ff; color: #fff; }
+  .facet-chip.on { background: #0f172a; color: #fff; border-color: #0f172a; }
+  .ticker-row { transition: background .2s; }
+  .ticker-row:hover { background: #f8fafc; }
+  .modal-backdrop { backdrop-filter: blur(3px); }
+  .thumb { position: relative; overflow: hidden; }
+  .thumb::after { content:''; position:absolute; inset:0; background: radial-gradient(120% 80% at 20% 10%, rgba(255,255,255,.28), transparent 60%); }
+  .spark { height: 34px; }
+  table.data tbody tr:hover { background: #f8fafc; }
+  .badge { font-size: 10px; letter-spacing: .04em; text-transform: uppercase; font-weight: 700; }
+  input[type=range] { accent-color: #3363ff; }
+  .switch { width: 38px; height: 22px; border-radius: 999px; background: #cbd5e1; position: relative; cursor: pointer; transition: background .2s; flex: none; }
+  .switch::after { content:''; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:999px; background:#fff; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.2);}
+  .switch.on { background: #3363ff; }
+  .switch.on::after { transform: translateX(16px); }
+  .toast { animation: slideIn .3s ease both; }
+  .heat { transition: transform .15s; cursor: pointer; }
+  .heat:hover { transform: scale(1.08); z-index: 5; }
+  .tab.on { color:#0f172a; border-color:#0f172a; }
+  .code { font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body class="font-sans text-ink-900">
+
+<!-- ===================== LAYOUT ===================== -->
+<div class="flex min-h-screen">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar" class="dark-scroll w-[248px] flex-none bg-ink-900 text-slate-400 flex flex-col fixed inset-y-0 z-40 overflow-y-auto">
+    <div class="px-5 py-5 flex items-center gap-3 border-b border-white/5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 grid place-items-center text-white font-extrabold text-[15px] shadow-lg">А</div>
+      <div>
+        <div class="text-white font-bold text-[15px] leading-tight tracking-tight">Алтай.Медиа</div>
+        <div class="text-[10px] uppercase tracking-[.14em] text-slate-500 font-semibold">Regional Intelligence</div>
+      </div>
+    </div>
+
+    <div class="px-3 pt-4 pb-2">
+      <button id="tenantBtn" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition text-left">
+        <svg class="w-4 h-4 text-brand-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s7-5.1 7-11a7 7 0 10-14 0c0 5.9 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+        <span class="flex-1 min-w-0">
+          <span class="block text-[12px] text-white font-semibold truncate" id="tenantName">Алтайский край</span>
+          <span class="block text-[10px] text-slate-500">Ядро: Барнаул</span>
+        </span>
+        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>
+      </button>
+    </div>
+
+    <nav class="px-3 py-2 space-y-[2px] text-[13px] font-medium" id="nav"></nav>
+
+    <div class="mt-auto px-4 py-4 border-t border-white/5">
+      <div class="rounded-xl bg-white/5 p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-semibold text-white">Тариф PRO</span>
+          <span class="badge text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">активен</span>
+        </div>
+        <div class="space-y-2">
+          <div>
+            <div class="flex justify-between text-[10px] text-slate-500 mb-1"><span>Источники</span><span class="code">18/50</span></div>
+            <div class="h-1.5 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-brand-400 rounded-full" style="width:36%"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between text-[10px] text-slate-500 mb-1"><span>AI-токены</span><span class="code">412k/1M</span></div>
+            <div class="h-1.5 rounded-full bg-white/10 overflow-hidden"><div class="h-full bg-emerald-400 rounded-full" style="width:41%"></div></div>
+          </div>
+        </div>
+        <button data-nav="billing" class="mt-3 w-full text-[11px] font-semibold text-white bg-brand-600 hover:bg-brand-500 rounded-lg py-1.5 transition">Управление подпиской</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="flex-1 ml-[248px] flex flex-col min-w-0">
+
+    <!-- TOPBAR -->
+    <header class="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-ink-100 h-16 flex items-center gap-3 px-6">
+      <div class="relative flex-1 max-w-xl">
+        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M20 20l-3.5-3.5"/></svg>
+        <input id="globalSearch" placeholder="Поиск по 124 380 материалам, источникам, персонам…" class="w-full pl-9 pr-24 py-2 text-[13px] bg-ink-50 border border-transparent focus:border-brand-300 focus:bg-white rounded-lg outline-none transition" />
+        <span class="absolute right-2.5 top-1/2 -translate-y-1/2 code text-[10px] text-slate-400 bg-white border border-ink-200 rounded px-1.5 py-0.5">⌘K</span>
+      </div>
+
+      <div class="flex items-center gap-2 flex-none">
+        <div class="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-dot"></span>
+          <span class="text-[11px] font-semibold text-emerald-700">Live</span>
+          <span class="code text-[11px] text-emerald-800/70" id="wsStatus">ws://connected</span>
+        </div>
+        <button id="btnParse" class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-900 text-white text-[12px] font-semibold hover:bg-ink-800 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 4v6h6M20 20v-6h-6"/><path stroke-linecap="round" d="M20 9A8 8 0 006.3 5.7L4 8M4 15a8 8 0 0013.7 3.3L20 16"/></svg>
+          Парсить сейчас
+        </button>
+        <button id="btnBell" class="relative w-9 h-9 grid place-items-center rounded-lg hover:bg-ink-50 transition text-slate-600">
+          <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8zM13.7 21a2 2 0 01-3.4 0"/></svg>
+          <span class="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold grid place-items-center" id="bellCount">4</span>
+        </button>
+        <div class="w-px h-7 bg-ink-200 mx-1"></div>
+        <button id="btnUser" class="flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-lg hover:bg-ink-50 transition">
+          <span class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-800 grid place-items-center text-white text-[12px] font-bold">АП</span>
+          <span class="text-left hidden md:block">
+            <span class="block text-[12px] font-semibold leading-tight">А. Прохоров</span>
+            <span class="block text-[10px] text-slate-500" id="userRoleLabel">ADMIN · Алтайский край</span>
+          </span>
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 p-6 min-w-0" id="main">
+
+      <!-- ============ VIEW: DASHBOARD ============ -->
+      <section class="view active" id="view-dashboard">
+        <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+          <div>
+            <div class="text-[11px] font-semibold uppercase tracking-[.14em] text-brand-600 mb-1">Обзор · вторник, 15 сентября 2026</div>
+            <h1 class="text-[26px] font-extrabold tracking-tight">Медиаландшафт Алтайского края</h1>
+            <p class="text-[13px] text-slate-500 mt-1">Агрегация 18 источников · 124 380 материалов · обновление каждые 15 минут</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="flex rounded-lg border border-ink-200 bg-white p-0.5 text-[12px] font-semibold" id="dashRange">
+              <button class="px-3 py-1.5 rounded-md text-slate-500 hover:text-ink-900" data-range="24h">24ч</button>
+              <button class="px-3 py-1.5 rounded-md bg-ink-900 text-white" data-range="7d">7 дней</button>
+              <button class="px-3 py-1.5 rounded-md text-slate-500 hover:text-ink-900" data-range="30d">30 дней</button>
+              <button class="px-3 py-1.5 rounded-md text-slate-500 hover:text-ink-900" data-range="90d">90 дней</button>
+            </div>
+            <button data-action="export" class="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-ink-200 bg-white text-[12px] font-semibold hover:bg-ink-50 transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+              Экспорт
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI -->
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6" id="kpiRow"></div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+          <!-- Live feed -->
+          <div class="xl:col-span-2 bg-white rounded-2xl border border-ink-100 shadow-card overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-ink-100">
+              <div class="flex items-center gap-2.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
+                <h2 class="font-bold text-[15px]">Поток в реальном времени</h2>
+                <span class="badge text-brand-700 bg-brand-50 px-2 py-0.5 rounded">WebSocket</span>
+              </div>
+              <button data-nav="feed" class="text-[12px] font-semibold text-brand-600 hover:text-brand-700">Вся лента →</button>
+            </div>
+            <div class="divide-y divide-ink-50 max-h-[352px] overflow-y-auto" id="liveTicker"></div>
+          </div>
+
+          <!-- Sentiment -->
+          <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="font-bold text-[15px]">Тональность</h2>
+              <span class="badge text-slate-500 bg-ink-50 px-2 py-0.5 rounded">NLP · GigaChat</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mb-3">Распределение за выбранный период</p>
+            <div class="h-[188px]"><canvas id="chSentiment"></canvas></div>
+            <div class="mt-4 pt-4 border-t border-ink-100 space-y-2" id="sentimentLegend"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+          <div class="xl:col-span-2 bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h2 class="font-bold text-[15px]">Динамика публикаций по секторам</h2>
+                <p class="text-[11px] text-slate-500">Стековые области · авто-рубрикация</p>
+              </div>
+              <div class="flex gap-1 text-[11px] font-semibold" id="sectorToggles"></div>
+            </div>
+            <div class="h-[260px]"><canvas id="chVolume"></canvas></div>
+          </div>
+          <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <h2 class="font-bold text-[15px] mb-1">Топ источников</h2>
+            <p class="text-[11px] text-slate-500 mb-4">По объёму материалов</p>
+            <div class="h-[260px]"><canvas id="chSources"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <!-- Geo -->
+          <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="font-bold text-[15px]">Гео-распределение</h2>
+              <span class="badge text-slate-500 bg-ink-50 px-2 py-0.5 rounded">69 районов</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mb-4">Интенсивность инфоповодов по территории</p>
+            <div class="grid grid-cols-9 gap-1 mb-4" id="geoHeat"></div>
+            <div class="space-y-2" id="geoLegend"></div>
+          </div>
+          <!-- Persons -->
+          <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="font-bold text-[15px]">Персоны (NER)</h2>
+              <span class="badge text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">1 284 сущности</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mb-4">Извлечено из текста автоматически</p>
+            <div class="space-y-2.5" id="personsList"></div>
+          </div>
+          <!-- Health -->
+          <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <h2 class="font-bold text-[15px] mb-1">Состояние парсеров</h2>
+            <p class="text-[11px] text-slate-500 mb-4">Очередь BullMQ · 3 воркера</p>
+            <div class="space-y-3" id="parserHealth"></div>
+            <div class="mt-4 pt-4 border-t border-ink-100 grid grid-cols-3 gap-2 text-center">
+              <div><div class="text-[18px] font-extrabold code" id="statQueue">7</div><div class="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">в очереди</div></div>
+              <div><div class="text-[18px] font-extrabold code text-emerald-600" id="statOk">3</div><div class="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">работают</div></div>
+              <div><div class="text-[18px] font-extrabold code text-rose-600" id="statErr">1</div><div class="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">ошибки</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: FEED ============ -->
+      <section class="view" id="view-feed">
+        <div class="flex flex-wrap items-end justify-between gap-4 mb-5">
+          <div>
+            <div class="text-[11px] font-semibold uppercase tracking-[.14em] text-brand-600 mb-1">Лента</div>
+            <h1 class="text-[26px] font-extrabold tracking-tight">Умные фильтры контента</h1>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="feedSort" class="text-[12px] font-semibold border border-ink-200 rounded-lg px-3 py-2 bg-white outline-none">
+              <option value="date">Сначала новые</option>
+              <option value="old">Сначала старые</option>
+              <option value="sent">По тональности ↓</option>
+              <option value="src">По источнику</option>
+            </select>
+            <button id="btnSaveFilter" class="text-[12px] font-semibold px-3 py-2 rounded-lg border border-ink-200 bg-white hover:bg-ink-50 transition">Сохранить фильтр</button>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-4 mb-4">
+          <div class="flex flex-wrap items-center gap-2 mb-3">
+            <div class="relative flex-1 min-w-[240px]">
+              <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M20 20l-3.5-3.5"/></svg>
+              <input id="feedSearch" placeholder="Полнотекстовый поиск · заголовки, тела, персоны, организации…" class="w-full pl-9 pr-3 py-2 text-[13px] bg-ink-50 rounded-lg outline-none focus:bg-white focus:ring-2 focus:ring-brand-200 transition" />
+            </div>
+            <div class="flex items-center gap-2 text-[12px]">
+              <span class="text-slate-500 font-semibold">Период</span>
+              <input type="date" id="feedFrom" class="border border-ink-200 rounded-lg px-2 py-1.5 text-[12px] outline-none" />
+              <span class="text-slate-400">—</span>
+              <input type="date" id="feedTo" class="border border-ink-200 rounded-lg px-2 py-1.5 text-[12px] outline-none" />
+            </div>
+            <button id="feedReset" class="text-[12px] font-semibold text-slate-500 hover:text-ink-900 px-2">Сбросить</button>
+          </div>
+
+          <div class="space-y-2.5" id="facetRows"></div>
+
+          <div class="flex items-center justify-between mt-3 pt-3 border-t border-ink-100">
+            <div class="flex flex-wrap gap-1.5" id="activeChips"></div>
+            <div class="text-[12px] text-slate-500 font-semibold whitespace-nowrap" id="feedCount"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4" id="feedGrid"></div>
+        <div class="text-center py-8"><button id="feedMore" class="px-6 py-2.5 rounded-lg border border-ink-200 bg-white text-[13px] font-semibold hover:bg-ink-50 transition">Показать ещё</button></div>
+      </section>
+
+      <!-- ============ VIEW: ANALYTICS ============ -->
+      <section class="view" id="view-analytics">
+        <div class="flex flex-wrap items-end justify-between gap-4 mb-5">
+          <div>
+            <div class="text-[11px] font-semibold uppercase tracking-[.14em] text-brand-600 mb-1">Аналитика</div>
+            <h1 class="text-[26px] font-extrabold tracking-tight">Отчёты и визуализация данных</h1>
+          </div>
+          <div class="flex gap-2">
+            <button data-action="export" data-fmt="xlsx" class="px-3 py-2 rounded-lg border border-ink-200 bg-white text-[12px] font-semibold hover:bg-ink-50 transition">Excel</button>
+            <button data-action="export" data-fmt="pdf" class="px-3 py-2 rounded-lg bg-ink-900 text-white text-[12px] font-semibold hover:bg-ink-800 transition">PDF-отчёт</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-4" id="anKpis"></div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
+          <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <h2 class="font-bold text-[15px] mb-1">Индекс тональности во времени</h2>
+            <p class="text-[11px] text-slate-500 mb-4">Средневзвешенный скор −1…+1 · скользящее окно 3 дня</p>
+            <div class="h-[250px]"><canvas id="chSentTime"></canvas></div>
+          </div>
+          <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <h2 class="font-bold text-[15px] mb-1">Сравнение источников</h2>
+            <p class="text-[11px] text-slate-500 mb-4">Объём vs доля негатива vs охват</p>
+            <div class="h-[250px]"><canvas id="chCompare"></canvas></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
+          <div class="xl:col-span-2 bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <h2 class="font-bold text-[15px] mb-1">Тепловая карта «тема × источник»</h2>
+            <p class="text-[11px] text-slate-500 mb-4">Интенсивность освещения тем</p>
+            <div class="overflow-x-auto" id="heatmapWrap"></div>
+          </div>
+          <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <h2 class="font-bold text-[15px] mb-1">Облако тем</h2>
+            <p class="text-[11px] text-slate-500 mb-4">Частотный анализ NER + ключевых слов</p>
+            <div class="flex flex-wrap gap-2 items-center justify-center min-h-[240px] py-3" id="wordCloud"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <h2 class="font-bold text-[15px] mb-1">Активность по часам суток</h2>
+            <p class="text-[11px] text-slate-500 mb-4">Часовой пояс Asia/Barnaul (UTC+7)</p>
+            <div class="h-[220px]"><canvas id="chHours"></canvas></div>
+          </div>
+          <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <h2 class="font-bold text-[15px] mb-4">AI-инсайты недели</h2>
+            <div class="space-y-3" id="aiInsights"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: SOURCES ============ -->
+      <section class="view" id="view-sources">
+        <div class="flex flex-wrap items-end justify-between gap-4 mb-5">
+          <div>
+            <div class="text-[11px] font-semibold uppercase tracking-[.14em] text-brand-600 mb-1">Источники</div>
+            <h1 class="text-[26px] font-extrabold tracking-tight">Реестр ресурсов и парсеры</h1>
+            <p class="text-[13px] text-slate-500 mt-1">Ручное добавление с инструкциями парсинга + AI-дискавери новых ресурсов</p>
+          </div>
+          <div class="flex gap-2">
+            <button id="btnDiscover" class="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-brand-200 bg-brand-50 text-brand-700 text-[12px] font-semibold hover:bg-brand-100 transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 3v2m0 14v2M5.6 5.6l1.4 1.4m10 10l1.4 1.4M3 12h2m14 0h2M5.6 18.4L7 17m10-10l1.4-1.4"/><circle cx="12" cy="12" r="3.2"/></svg>
+              AI-дискавери источников
+            </button>
+            <button id="btnAddSource" class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink-900 text-white text-[12px] font-semibold hover:bg-ink-800 transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+              Добавить источник
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-4" id="srcKpis"></div>
+
+        <div class="bg-white rounded-2xl border border-ink-100 shadow-card overflow-hidden">
+          <div class="flex items-center gap-3 px-5 py-3 border-b border-ink-100">
+            <div class="flex gap-1 text-[12px] font-semibold" id="srcTabs">
+              <button class="tab on px-3 py-1.5 rounded-lg border border-transparent" data-tab="all">Все</button>
+              <button class="tab px-3 py-1.5 rounded-lg border border-transparent text-slate-500" data-tab="active">Активные</button>
+              <button class="tab px-3 py-1.5 rounded-lg border border-transparent text-slate-500" data-tab="error">С ошибками</button>
+              <button class="tab px-3 py-1.5 rounded-lg border border-transparent text-slate-500" data-tab="paused">Пауза</button>
+            </div>
+            <input id="srcSearch" placeholder="Фильтр по названию или домену…" class="ml-auto w-64 px-3 py-1.5 text-[12px] bg-ink-50 rounded-lg outline-none" />
+          </div>
+          <div class="overflow-x-auto">
+            <table class="data w-full text-[12.5px] min-w-[1080px]">
+              <thead class="bg-ink-50 text-[10px] uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th class="text-left font-bold px-5 py-2.5">Источник</th>
+                  <th class="text-left font-bold px-3 py-2.5">Тип</th>
+                  <th class="text-left font-bold px-3 py-2.5">Парсер</th>
+                  <th class="text-left font-bold px-3 py-2.5">Расписание</th>
+                  <th class="text-right font-bold px-3 py-2.5">Материалов</th>
+                  <th class="text-left font-bold px-3 py-2.5">Последний запуск</th>
+                  <th class="text-left font-bold px-3 py-2.5">Статус</th>
+                  <th class="text-right font-bold px-5 py-2.5">Действия</th>
+                </tr>
+              </thead>
+              <tbody id="srcTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: ALERTS ============ -->
+      <section class="view" id="view-alerts">
+        <div class="flex flex-wrap items-end justify-between gap-4 mb-5">
+          <div>
+            <div class="text-[11px] font-semibold uppercase tracking-[.14em] text-brand-600 mb-1">Мониторинг</div>
+            <h1 class="text-[26px] font-extrabold tracking-tight">Правила и алерты</h1>
+          </div>
+          <button id="btnAddAlert" class="px-3 py-2 rounded-lg bg-ink-900 text-white text-[12px] font-semibold hover:bg-ink-800 transition">+ Новое правило</button>
+        </div>
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4" id="alertsGrid"></div>
+      </section>
+
+      <!-- ============ VIEW: REPORTS ============ -->
+      <section class="view" id="view-reports">
+        <div class="mb-5">
+          <div class="text-[11px] font-semibold uppercase tracking-[.14em] text-brand-600 mb-1">Отчётность</div>
+          <h1 class="text-[26px] font-extrabold tracking-tight">Конструктор отчётов</h1>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6" id="reportTemplates"></div>
+        <div class="bg-white rounded-2xl border border-ink-100 shadow-card overflow-hidden">
+          <div class="px-5 py-4 border-b border-ink-100 font-bold text-[15px]">Сформированные отчёты</div>
+          <table class="data w-full text-[12.5px]">
+            <thead class="bg-ink-50 text-[10px] uppercase tracking-wider text-slate-500">
+              <tr><th class="text-left font-bold px-5 py-2.5">Отчёт</th><th class="text-left font-bold px-3 py-2.5">Тип</th><th class="text-left font-bold px-3 py-2.5">Период</th><th class="text-left font-bold px-3 py-2.5">Статус</th><th class="text-left font-bold px-3 py-2.5">Формат</th><th class="text-right font-bold px-5 py-2.5"></th></tr>
+            </thead>
+            <tbody id="reportsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: USERS ============ -->
+      <section class="view" id="view-users">
+        <div class="flex flex-wrap items-end justify-between gap-4 mb-5">
+          <div>
+            <div class="text-[11px] font-semibold uppercase tracking-[.14em] text-brand-600 mb-1">Доступ</div>
+            <h1 class="text-[26px] font-extrabold tracking-tight">Пользователи и роли</h1>
+          </div>
+          <button data-action="invite" class="px-3 py-2 rounded-lg bg-ink-900 text-white text-[12px] font-semibold hover:bg-ink-800 transition">+ Пригласить</button>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-4 mb-4">
+          <div class="xl:col-span-3 bg-white rounded-2xl border border-ink-100 shadow-card overflow-hidden">
+            <table class="data w-full text-[12.5px]">
+              <thead class="bg-ink-50 text-[10px] uppercase tracking-wider text-slate-500"><tr>
+                <th class="text-left font-bold px-5 py-2.5">Пользователь</th><th class="text-left font-bold px-3 py-2.5">Роль</th>
+                <th class="text-left font-bold px-3 py-2.5">Права</th><th class="text-left font-bold px-3 py-2.5">Последний вход</th>
+                <th class="text-left font-bold px-3 py-2.5">Статус</th><th class="text-right font-bold px-5 py-2.5"></th></tr></thead>
+              <tbody id="usersTable"></tbody>
+            </table>
+          </div>
+          <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+            <h2 class="font-bold text-[15px] mb-1">Матрица ролей</h2>
+            <p class="text-[11px] text-slate-500 mb-4">RBAC + гранулярные permissions</p>
+            <div class="space-y-2.5" id="roleMatrix"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: SETTINGS ============ -->
+      <section class="view" id="view-settings">
+        <div class="mb-5">
+          <div class="text-[11px] font-semibold uppercase tracking-[.14em] text-brand-600 mb-1">Конфигурация</div>
+          <h1 class="text-[26px] font-extrabold tracking-tight">Настройки платформы</h1>
+        </div>
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <div class="xl:col-span-2 space-y-4">
+            <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+              <h2 class="font-bold text-[15px] mb-4">Интеграции</h2>
+              <div class="space-y-1" id="integrations"></div>
+            </div>
+            <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+              <h2 class="font-bold text-[15px] mb-1">NLP-конвейер</h2>
+              <p class="text-[11px] text-slate-500 mb-4">Обработка каждого материала после парсинга</p>
+              <div class="space-y-1" id="nlpPipeline"></div>
+            </div>
+          </div>
+          <div class="space-y-4">
+            <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+              <h2 class="font-bold text-[15px] mb-4">Тенант</h2>
+              <div class="space-y-3 text-[12.5px]" id="tenantInfo"></div>
+            </div>
+            <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5">
+              <h2 class="font-bold text-[15px] mb-1">Локализация</h2>
+              <p class="text-[11px] text-slate-500 mb-4">Готовность к выходу на другие рынки</p>
+              <div class="space-y-3" id="localeInfo"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ VIEW: BILLING ============ -->
+      <section class="view" id="view-billing">
+        <div class="mb-5">
+          <div class="text-[11px] font-semibold uppercase tracking-[.14em] text-brand-600 mb-1">Подписка</div>
+          <h1 class="text-[26px] font-extrabold tracking-tight">Тарифы и оплата</h1>
+          <p class="text-[13px] text-slate-500 mt-1">Эквайринг: ЮKassa · Поддержка СБП, карт РФ, счетов для юрлиц</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6" id="plans"></div>
+        <div class="bg-white rounded-2xl border border-ink-100 shadow-card overflow-hidden">
+          <div class="px-5 py-4 border-b border-ink-100 font-bold text-[15px]">История платежей</div>
+          <table class="data w-full text-[12.5px]">
+            <thead class="bg-ink-50 text-[10px] uppercase tracking-wider text-slate-500"><tr>
+              <th class="text-left font-bold px-5 py-2.5">Дата</th><th class="text-left font-bold px-3 py-2.5">Описание</th>
+              <th class="text-left font-bold px-3 py-2.5">Способ</th><th class="text-right font-bold px-3 py-2.5">Сумма</th>
+              <th class="text-left font-bold px-5 py-2.5">Статус</th></tr></thead>
+            <tbody id="paymentsTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ===================== MODAL ===================== -->
+<div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+  <div class="absolute inset-0 bg-ink-900/45 modal-backdrop" data-close></div>
+  <div class="relative bg-white rounded-2xl shadow-pop w-full max-w-2xl max-h-[88vh] overflow-hidden flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-ink-100">
+      <h3 class="font-bold text-[16px]" id="modalTitle">Заголовок</h3>
+      <button data-close class="w-8 h-8 grid place-items-center rounded-lg hover:bg-ink-50 text-slate-400">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="p-6 overflow-y-auto" id="modalBody"></div>
+    <div class="px-6 py-4 border-t border-ink-100 bg-ink-50 flex justify-end gap-2" id="modalFoot"></div>
+  </div>
+</div>
+
+<!-- ===================== TOASTS ===================== -->
+<div id="toasts" class="fixed bottom-5 right-5 z-[60] space-y-2 w-[340px]"></div>
+
+<script>
+/* ==========================================================================
+   Алтай.Медиа — клиентский слой платформы
+   Данные эмулируют REST API (Fastify) + WebSocket-поток
+   ========================================================================== */
+
+/* ---------- УТИЛИТЫ ---------- */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const rnd = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+const pick = a => a[rnd(0, a.length - 1)];
+const nf = n => n.toLocaleString('ru-RU');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const SENT = {
+  VP: { label: 'Очень позитивный', short: 'позитив++', cls: 'bg-emerald-100 text-emerald-800', hex: '#059669' },
+  P:  { label: 'Позитивный',       short: 'позитив',   cls: 'bg-emerald-50 text-emerald-700',  hex: '#34d399' },
+  N:  { label: 'Нейтральный',      short: 'нейтрально',cls: 'bg-ink-100 text-ink-700',         hex: '#94a3b8' },
+  NG: { label: 'Негативный',       short: 'негатив',   cls: 'bg-amber-50 text-amber-800',      hex: '#f59e0b' },
+  VN: { label: 'Критический',      short: 'критично',  cls: 'bg-rose-100 text-rose-800',       hex: '#e11d48' },
+};
+
+const SECTORS = {
+  agro:  { name: 'Агросектор',      hex: '#059669' },
+  fuel:  { name: 'Топливо/энергия', hex: '#f59e0b' },
+  gov:   { name: 'Госуправление',   hex: '#3363ff' },
+  food:  { name: 'Пищевая пром.',   hex: '#8b5cf6' },
+  city:  { name: 'Город/ЖКХ',       hex: '#0ea5e9' },
+  econ:  { name: 'Экономика',       hex: '#e11d48' },
+  soc:   { name: 'Общество',        hex: '#64748b' },
+};
+
+/* ---------- ИСТОЧНИКИ ---------- */
+const SOURCES = [
+  { id:'s1',  name:'Официальный портал Алтайского края', domain:'altairegion22.ru', type:'GOV_PORTAL', parser:'PLAYWRIGHT', cron:'*/15 * * * *', status:'active', items:18420, last:4,  errs:0, city:'Барнаул',  cat:'gov',  trust:96 },
+  { id:'s2',  name:'Администрация города Барнаула',      domain:'barnaul.org',      type:'GOV_PORTAL', parser:'PLAYWRIGHT', cron:'*/15 * * * *', status:'active', items:9210,  last:7,  errs:0, city:'Барнаул',  cat:'city', trust:94 },
+  { id:'s3',  name:'Алтайская правда',                   domain:'altapress.ru',     type:'NEWS_SITE',  parser:'PLAYWRIGHT', cron:'*/10 * * * *', status:'active', items:34102, last:2,  errs:0, city:'Барнаул',  cat:'soc',  trust:88 },
+  { id:'s4',  name:'Катунь 24',                          domain:'katun24.ru',       type:'NEWS_SITE',  parser:'PLAYWRIGHT', cron:'*/10 * * * *', status:'active', items:27844, last:3,  errs:0, city:'Барнаул',  cat:'soc',  trust:85 },
+  { id:'s5',  name:'Банкфакт',                           domain:'bankfax.ru',       type:'NEWS_SITE',  parser:'RSS',      cron:'*/20 * * * *', status:'active', items:21930, last:11, errs:0, city:'Барнаул',  cat:'econ', trust:82 },
+  { id:'s6',  name:'АМИ-ТАСС (лента Сибири)',            domain:'tass.ru',          type:'NEWS_SITE',  parser:'RSS',      cron:'*/10 * * * *', status:'active', items:12008, last:6,  errs:0, city:'—',        cat:'soc',  trust:90 },
+  { id:'s7',  name:'Минсельхоз Алтайского края',         domain:'altagro.ru',       type:'GOV_PORTAL', parser:'PLAYWRIGHT', cron:'0 * * * *',    status:'active', items:4120,  last:38, errs:0, city:'Барнаул',  cat:'agro', trust:95 },
+  { id:'s8',  name:'Алтайкрайстат',                      domain:'22.rosstat.gov.ru',type:'GOV_PORTAL', parser:'PLAYWRIGHT', cron:'0 */6 * * *',  status:'active', items:1840,  last:210,errs:0, city:'Барнаул',  cat:'econ', trust:98 },
+  { id:'s9',  name:'Telegram · Барнаул LIVE',            domain:'t.me/barnaul_live',type:'TELEGRAM',   parser:'TELEGRAM_BOT',cron:'* * * * *',   status:'active', items:8620,  last:1,  errs:0, city:'Барнаул',  cat:'city', trust:61 },
+  { id:'s10', name:'Telegram · АгроАлтай',               domain:'t.me/agroaltai',   type:'TELEGRAM',   parser:'TELEGRAM_BOT',cron:'*/5 * * * *', status:'active', items:3110,  last:2,  errs:0, city:'—',        cat:'agro', trust:64 },
+  { id:'s11', name:'Топливный портал Алтая',             domain:'fuel22.ru',        type:'NEWS_SITE',  parser:'CHEERIO',  cron:'0 */2 * * *',  status:'active', items:2280,  last:74, errs:0, city:'—',        cat:'fuel', trust:70 },
+  { id:'s12', name:'VK · Новости Бийска',                domain:'vk.com/biysk_news',type:'VK',         parser:'VK_API',   cron:'*/15 * * * *', status:'active', items:5440,  last:9,  errs:0, city:'Бийск',    cat:'city', trust:58 },
+  { id:'s13', name:'Бийский рабочий',                    domain:'biysk22.ru',       type:'NEWS_SITE',  parser:'PLAYWRIGHT', cron:'0 * * * *',    status:'error', items:3920,  last:190,errs:6, city:'Бийск',    cat:'soc',  trust:74 },
+  { id:'s14', name:'Рубцовск-онлайн',                    domain:'rubtsovsk.online', type:'NEWS_SITE',  parser:'PLAYWRIGHT', cron:'0 */2 * * *',  status:'active', items:2740,  last:52, errs:0, city:'Рубцовск', cat:'city', trust:66 },
+  { id:'s15', name:'Заринск.ру',                         domain:'zarinsk.ru',       type:'NEWS_SITE',  parser:'RSS',      cron:'0 */3 * * *',  status:'paused',items:1180,  last:4100,errs:0, city:'Заринск',  cat:'city', trust:60 },
+  { id:'s16', name:'Пищевая промышленность Сибири',      domain:'foodprom.ru',      type:'NEWS_SITE',  parser:'CHEERIO',  cron:'0 */4 * * *',  status:'active', items:1620,  last:126,errs:0, city:'—',        cat:'food', trust:72 },
+  { id:'s17', name:'YouTube · Регион 22',                domain:'youtube.com/@reg22',type:'YOUTUBE',   parser:'YOUTUBE_API',cron:'0 * * * *',   status:'active', items:940,   last:22, errs:0, city:'Барнаул',  cat:'soc',  trust:78 },
+  { id:'s18', name:'Форум «Алтайские соседи»',           domain:'forum-altai.ru',   type:'FORUM',      parser:'PLAYWRIGHT', cron:'0 */6 * * *',  status:'active', items:15620, last:31, errs:1, city:'—',        cat:'soc',  trust:35 },
+];
+
+const SRC_TYPE_LABEL = { GOV_PORTAL:'Гос. портал', NEWS_SITE:'СМИ', TELEGRAM:'Telegram', VK:'VK', FORUM:'Форум', YOUTUBE:'YouTube' };
+
+/* ---------- МАТЕРИАЛЫ ---------- */
+const TITLES = {
+  agro:[
+    'Аграрии Алтайского края намолотили более 4,2 млн тонн зерна нового урожая',
+    'В крае стартовала программа субсидирования покупки сельхозтехники на 2027 год',
+    'Экспорт алтайской пшеницы в Центральную Азию вырос на 18% за полугодие',
+    'Погодные аномалии августа снизили урожайность гречихи в восточных районах',
+    'Молочные фермы региона выходят на рекордные надои за последние пять лет',
+  ],
+  fuel:[
+    'Крупные сетевики региона заявили о стабилизации розничных цен на бензин АИ-95',
+    'Модернизация нефтебазы под Барнаулом завершится в первом квартале 2027 года',
+    'Дефицит дизтоплива в южных районах снят после перераспределения поставок',
+    'Алтайский край вошёл в пилот по развитию сети газомоторных заправок',
+  ],
+  gov:[
+    'Правительство региона утвердило стратегию развития до 2032 года',
+    'Депутаты обсудили распределение инфраструктурных бюджетных кредитов',
+    'Запущен единый цифровой контур для муниципальных образований края',
+    'Регион привлек 12 млрд рублей федеральных инвестиций в промышленность',
+  ],
+  food:[
+    'Барнаульский комбинат нарастил выпуск растительного масла на четверть',
+    'Пищевики края выводят на рынок линейку продуктов под собственными марками',
+    'Сыровары Алтая подтвердили экспортные сертификаты для рынков Юго-Восточной Азии',
+  ],
+  city:[
+    'В Барнауле завершили реконструкцию набережной: открыт новый участок',
+    'Городская среда: 42 двора благоустроят по программе в следующем сезоне',
+    'Транспортная реформа: муниципалитет обновит парк автобусов на 60 единиц',
+    'ЖКХ региона готово к отопительному сезону на 97%, отчитались в администрации',
+  ],
+  econ:[
+    'Индекс промышленного производства в крае вырос на 5,4% год к году',
+    'Малый бизнес региона получил льготные займы на 1,8 млрд рублей',
+    'Средняя зарплата в Алтайском крае превысила 62 тысячи рублей — Алтайкрайстат',
+    'Оборот розничной торговли в крае показал рост третий квартал подряд',
+  ],
+  soc:[
+    'В крае открыли 14 новых фельдшерско-акушерских пунктов в сёлах',
+    'Школы Барнаула переходят на обновлённые образовательные программы',
+    'Экологи зафиксировали снижение выбросов в промышленной зоне города',
+    'Регион примет всероссийский фестиваль народного творчества в октябре',
+  ],
+};
+
+const BODIES = [
+  'По данным профильного ведомства, показатель превысил плановые значения. Эксперты связывают динамику с реализацией профильных программ и расширением производственных мощностей. В ближайшие месяцы ожидается сохранение положительного тренда при условии стабильного финансирования.',
+  'Как сообщили в пресс-службе, работа велась совместно с муниципальными образованиями. Отдельное внимание уделено логистике и срокам. Представители отраслевого сообщества оценили результаты как умеренно позитивные, отметив необходимость дальнейшего сопровождения.',
+  'Ситуация обсуждалась на заседании рабочей группы. Участники указали на накопившиеся проблемы и предложили план их устранения. Контроль исполнения закреплён за профильным департаментом, первый отчёт ожидается до конца квартала.',
+  'Аналитики отмечают, что регион демонстрирует устойчивые показатели на фоне общероссийской динамики. Ключевым драйвером остаётся внутренний спрос. Риски связаны с сезонностью и зависимостью от внешних поставок отдельных комплектующих.',
+];
+
+const PERSONS = ['А. Соколов','И. Волков','В. Петров','Д. Кузнецов','М. Орлова','С. Белых','Е. Морозов','Н. Зайцева','П. Гуров','О. Лапина'];
+const ORGS = ['Правительство АК','Минсельхоз АК','Администрация Барнаула','Алтайкрайстат','АО «Алтай-Нефть»','ООО «Сибирь-Агро»','Минздрав АК','Торгово-промышленная палата'];
+const GEO = ['Барнаул','Бийск','Рубцовск','Новоалтайск','Заринск','Алейск','Славгород','Яровое','Благовещенский р-н','Павловский р-н','Ребрихинский р-н','Мамонтовский р-н','Шипуновский р-н','Тальменский р-н','Первомайский р-н','Калманский р-н','Зональный р-н','Косихинский р-н'];
+
+function makeArticles(n){
+  const out = [];
+  const keys = Object.keys(TITLES);
+  for (let i = 0; i < n; i++){
+    const sector = keys[i % keys.length];
+    const src = pick(SOURCES.filter(s => s.status === 'active'));
+    const title = pick(TITLES[sector]);
+    const sent = pick(['VP','P','N','N','N','NG','VN']);
+    const mins = rnd(1, 60 * 24 * 9);
+    out.push({
+      id: 'a' + i,
+      title,
+      sector,
+      sourceId: src.id,
+      source: src.name,
+      domain: src.domain,
+      srcType: src.type,
+      url: 'https://' + src.domain + '/news/' + rnd(10000,99999),
+      publishedAt: new Date(Date.now() - mins * 60000),
+      sentiment: sent,
+      score: (sent==='VP'?0.82:sent==='P'?0.41:sent==='N'?0.03:sent==='NG'?-0.44:-0.78) + (Math.random()*0.1-0.05),
+      body: pick(BODIES),
+      persons: [...new Set([pick(PERSONS), pick(PERSONS)])].slice(0,2),
+      orgs: [...new Set([pick(ORGS), pick(ORGS)])].slice(0,2),
+      geo: pick(GEO),
+      views: rnd(120, 18400),
+      isNew: mins < 60,
+    });
+  }
+  return out.sort((a,b) => b.publishedAt - a.publishedAt);
+}
+
+const ARTICLES = makeArticles(64);
+
+/* ---------- СОСТОЯНИЕ ---------- */
+const state = {
+  view: 'dashboard',
+  range: '7d',
+  filters: { q:'', sector:new Set(), source:new Set(), srcType:new Set(), sentiment:new Set(), geo:new Set() },
+  feedLimit: 12,
+  srcTab: 'all',
+  srcQuery: '',
+  role: 'ADMIN',
+};
+
+/* ---------- НАВИГАЦИЯ ---------- */
+const NAV = [
+  { g:'Аналитика', items:[
+    { id:'dashboard', label:'Дашборд',        ico:'M3 13h8V3H3v10zm10 8h8V11h-8v10zM3 21h8v-6H3v6zm10-12h8V3h-8v6z' },
+    { id:'feed',      label:'Лента',          ico:'M4 6h16M4 12h16M4 18h10' },
+    { id:'analytics', label:'Отчёты и графики',ico:'M4 19V5m0 14h16M8 16v-5m4 5V8m4 8v-3' },
+  ]},
+  { g:'Сбор данных', items:[
+    { id:'sources', label:'Источники',   ico:'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zm0 0v18M4 7.5l8 4.5 8-4.5' },
+    { id:'alerts',  label:'Алерты',      ico:'M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8zM13.7 21a2 2 0 01-3.4 0' },
+  ]},
+  { g:'Управление', items:[
+    { id:'reports',  label:'Конструктор отчётов', ico:'M9 12h6m-6 4h6M9 8h2m1 13H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2h-1' },
+    { id:'users',    label:'Пользователи и роли', ico:'M16 20v-1.5a4 4 0 00-4-4H7a4 4 0 00-4 4V20M9.5 9.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM22 20v-1.5a4 4 0 00-3-3.87M16 2.63a4 4 0 010 7.75' },
+    { id:'settings', label:'Настройки',           ico:'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 007.5 19.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 003.6 14H3a2 2 0 110-4h.1a1.6 1.6 0 001.1-2.7l-.1-.1a2 2 0 112.8-2.8l.1.1A1.6 1.6 0 0010 3.6V3a2 2 0 114 0v.1a1.6 1.6 0 002.7 1.1l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 001.1 2.7H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1.3z' },
+    { id:'billing',  label:'Тарифы и оплата',     ico:'M3 10h18M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z' },
+  ]},
+];
+
+function renderNav(){
+  $('#nav').innerHTML = NAV.map(g => `
+    <div class="pt-3 pb-1.5 px-3 text-[10px] font-bold uppercase tracking-[.14em] text-slate-600">${g.g}</div>
+    ${g.items.map(i => `
+      <button data-nav="${i.id}" class="nav-item w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition">
+        <span class="nav-ico w-7 h-7 rounded-lg bg-white/5 grid place-items-center flex-none">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="${i.ico}"/></svg>
+        </span>
+        <span class="truncate">${i.label}</span>
+      </button>`).join('')}
+  `).join('');
+}
+
+function go(view){
+  state.view = view;
+  $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
+  $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.nav === view));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (view === 'dashboard') drawDashboardCharts();
+  if (view === 'analytics') drawAnalyticsCharts();
+}
+
+/* ---------- ТОСТЫ ---------- */
+function toast(msg, type = 'info'){
+  const colors = { info:'border-l-brand-500', ok:'border-l-emerald-500', warn:'border-l-amber-500', err:'border-l-rose-500' };
+  const el = document.createElement('div');
+  el.className = `toast bg-white border border-ink-100 border-l-[3px] ${colors[type]} rounded-xl shadow-pop p-3.5 flex gap-3`;
+  el.innerHTML = `
+    <div class="flex-1 min-w-0">
+      <div class="text-[12.5px] font-semibold leading-snug">${esc(msg)}</div>
+      <div class="text-[10.5px] text-slate-400 mt-0.5 code">${new Date().toLocaleTimeString('ru-RU')}</div>
+    </div>
+    <button class="text-slate-300 hover:text-slate-500 flex-none">✕</button>`;
+  el.querySelector('button').onclick = () => el.remove();
+  $('#toasts').appendChild(el);
+  setTimeout(() => { el.style.transition='opacity .3s'; el.style.opacity='0'; setTimeout(()=>el.remove(),300); }, 4200);
+}
+
+/* ---------- МОДАЛ ---------- */
+function modal(title, body, foot){
+  $('#modalTitle').textContent = title;
+  $('#modalBody').innerHTML = body;
+  $('#modalFoot').innerHTML = foot || '';
+  $('#modal').classList.remove('hidden');
+  $('#modal').classList.add('flex');
+}
+function closeModal(){ $('#modal').classList.add('hidden'); $('#modal').classList.remove('flex'); }
+document.addEventListener('click', e => { if (e.target.hasAttribute('data-close')) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+/* ==========================================================================
+   DASHBOARD
+   ========================================================================== */
+const KPI = [
+  { label:'Материалов за период', value:'124 380', delta:'+8,4%', up:true, spark:[12,18,14,22,19,28,24,32,30,38,35,44], color:'#3363ff' },
+  { label:'Активных источников', value:'18', delta:'+2 новых', up:true, spark:[14,14,15,15,16,16,16,17,17,18,18,18], color:'#059669' },
+  { label:'Негативных упоминаний', value:'3 912', delta:'−4,1%', up:false, spark:[40,38,42,36,34,37,31,29,32,27,25,24], color:'#e11d48' },
+  { label:'Сработавших алертов', value:'27', delta:'+11 за сутки', up:true, spark:[2,4,3,6,5,8,7,9,12,10,14,13], color:'#f59e0b' },
+];
+
+function renderKpis(){
+  $('#kpiRow').innerHTML = KPI.map((k,i) => `
+    <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-4">
+      <div class="flex items-start justify-between mb-2">
+        <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide leading-tight">${k.label}</span>
+        <span class="badge ${k.up ? 'text-emerald-700 bg-emerald-50':'text-rose-700 bg-rose-50'} px-1.5 py-0.5 rounded whitespace-nowrap">${k.delta}</span>
+      </div>
+      <div class="text-[26px] font-extrabold tracking-tight code leading-none">${k.value}</div>
+      <canvas class="spark mt-2" id="spark${i}"></canvas>
+    </div>`).join('');
+
+  KPI.forEach((k,i) => {
+    const c = document.getElementById('spark'+i);
+    new Chart(c, {
+      type:'line',
+      data:{ labels:k.spark.map((_,j)=>j), datasets:[{ data:k.spark, borderColor:k.color, borderWidth:1.8, fill:true,
+        backgroundColor:(ctx)=>{ const g=ctx.chart.ctx.createLinearGradient(0,0,0,34); g.addColorStop(0,k.color+'33'); g.addColorStop(1,k.color+'00'); return g; },
+        tension:.4, pointRadius:0 }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},tooltip:{enabled:false}},
+        scales:{x:{display:false},y:{display:false}}, animation:{duration:700} }
+    });
+  });
+}
+
+function timeAgo(d){
+  const s = Math.floor((Date.now() - d.getTime())/1000);
+  if (s < 60) return s + ' сек назад';
+  if (s < 3600) return Math.floor(s/60) + ' мин назад';
+  if (s < 86400) return Math.floor(s/3600) + ' ч назад';
+  return Math.floor(s/86400) + ' дн назад';
+}
+
+function renderTicker(){
+  $('#liveTicker').innerHTML = ARTICLES.slice(0,9).map(a => tickerRow(a)).join('');
+}
+function tickerRow(a){
+  const s = SENT[a.sentiment];
+  return `
+  <div class="ticker-row live-item px-5 py-3 flex gap-3 items-start border-l-2" style="border-color:${s.hex}">
+    <span class="w-1.5 h-1.5 rounded-full mt-2 flex-none" style="background:${SECTORS[a.sector].hex}"></span>
+    <div class="flex-1 min-w-0">
+      <div class="text-[13px] font-semibold leading-snug truncate">${esc(a.title)}</div>
+      <div class="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+        <span class="font-semibold text-slate-600">${esc(a.source)}</span>
+        <span class="text-slate-300">·</span><span>${esc(a.geo)}</span>
+        <span class="text-slate-300">·</span><span class="code">${timeAgo(a.publishedAt)}</span>
+      </div>
+    </div>
+    <span class="badge ${s.cls} px-1.5 py-0.5 rounded flex-none mt-0.5">${s.short}</span>
+  </div>`;
+}
+
+function renderSentimentLegend(){
+  const counts = {}; Object.keys(SENT).forEach(k => counts[k]=0);
+  ARTICLES.forEach(a => counts[a.sentiment]++);
+  const total = ARTICLES.length;
+  $('#sentimentLegend').innerHTML = Object.entries(SENT).map(([k,v]) => `
+    <div class="flex items-center gap-2">
+      <span class="w-2.5 h-2.5 rounded-sm flex-none" style="background:${v.hex}"></span>
+      <span class="text-[12px] text-slate-600 flex-1">${v.label}</span>
+      <span class="code text-[12px] font-semibold">${counts[k]}</span>
+      <span class="code text-[10.5px] text-slate-400 w-10 text-right">${Math.round(counts[k]/total*100)}%</span>
+    </div>`).join('');
+}
+
+function renderPersons(){
+  const counts = {};
+  ARTICLES.forEach(a => a.persons.forEach(p => counts[p] = (counts[p]||0)+1));
+  const top = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,7);
+  const max = top[0][1];
+  $('#personsList').innerHTML = top.map(([p,c],i) => `
+    <div>
+      <div class="flex items-baseline justify-between mb-1">
+        <span class="text-[12.5px] font-semibold">${i+1}. ${esc(p)}</span>
+        <span class="code text-[11.5px] text-slate-500">${c} упом.</span>
+      </div>
+      <div class="h-1.5 rounded-full bg-ink-100 overflow-hidden">
+        <div class="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand-700" style="width:${c/max*100}%"></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderGeo(){
+  const tiles = GEO.concat(['Егорьевский','Волчихинский','Третьяковский','Угловский','Советский','Усть-Калманский','Красногорский','Солонешенский','Чарышский','Быстроистокский','Панкрушихинский','Хабарский','Родинский','Новичихинский','Петровский','Топчихинский','Крутихинский','Тюменцевский']);
+  $('#geoHeat').innerHTML = tiles.map((g,i) => {
+    const v = Math.random();
+    const bg = v > .82 ? '#1e40af' : v > .66 ? '#3b82f6' : v > .48 ? '#93c5fd' : v > .3 ? '#dbeafe' : '#f1f5f9';
+    const tc = v > .66 ? '#fff' : '#64748b';
+    return `<div class="heat aspect-square rounded-[5px] grid place-items-center text-[9px] font-bold" style="background:${bg};color:${tc}" title="${g}">${g.slice(0,2)}</div>`;
+  }).join('');
+  $('#geoLegend').innerHTML = [
+    ['Барнаул', 41280, '#1e40af'], ['Бийск', 14820, '#3b82f6'], ['Рубцовск', 9140, '#60a5fa'],
+    ['Новоалтайск', 5210, '#93c5fd'], ['Прочие районы', 53930, '#dbeafe']
+  ].map(([n,v,c]) => `
+    <div class="flex items-center gap-2">
+      <span class="w-2.5 h-2.5 rounded-sm flex-none" style="background:${c}"></span>
+      <span class="text-[12px] text-slate-600 flex-1">${n}</span>
+      <span class="code text-[11.5px] font-semibold">${nf(v)}</span>
+    </div>`).join('');
+}
+
+function renderParserHealth(){
+  const items = [
+    { n:'playwright-pool', s:'ok', d:'12 источников · 3 браузера' },
+    { n:'rss-collector',   s:'ok', d:'4 фида · без ошибок' },
+    { n:'telegram-bot',    s:'ok', d:'2 канала · polling' },
+    { n:'vk-api',          s:'warn', d:'rate-limit 80%' },
+    { n:'cheerio-static',  s:'err', d:'biysk22.ru · 6 попыток' },
+  ];
+  const map = { ok:['bg-emerald-500','Работает'], warn:['bg-amber-500','Нагрузка'], err:['bg-rose-500','Ошибка'] };
+  $('#parserHealth').innerHTML = items.map(i => `
+    <div class="flex items-center gap-2.5">
+      <span class="w-2 h-2 rounded-full flex-none ${map[i.s][0]}"></span>
+      <span class="code text-[12px] font-semibold flex-none w-[122px] truncate">${i.n}</span>
+      <span class="text-[11px] text-slate-500 flex-1 truncate">${i.d}</span>
+      <span class="badge text-slate-500 bg-ink-50 px-1.5 py-0.5 rounded flex-none">${map[i.s][1]}</span>
+    </div>`).join('');
+}
+
+let dashCharts = {};
+function drawDashboardCharts(){
+  Object.values(dashCharts).forEach(c => c.destroy());
+  dashCharts = {};
+
+  const days = state.range === '24h' ? 24 : state.range === '7d' ? 7 : state.range === '30d' ? 30 : 90;
+  const labels = state.range === '24h'
+    ? Array.from({length:24},(_,i)=>String(i).padStart(2,'0')+':00')
+    : Array.from({length:days},(_,i)=>{ const d=new Date(Date.now()-(days-1-i)*864e5); return d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'}); });
+
+  const mk = base => labels.map((_,i)=> Math.round(base + Math.sin(i/3)*base*.35 + Math.random()*base*.45));
+
+  dashCharts.sent = new Chart($('#chSentiment'), {
+    type:'doughnut',
+    data:{ labels:Object.values(SENT).map(s=>s.short),
+      datasets:[{ data:[14,22,38,18,8], backgroundColor:Object.values(SENT).map(s=>s.hex), borderWidth:0, hoverOffset:6 }]},
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'66%',
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${c.label}: ${c.parsed}%` } } } }
+  });
+
+  dashCharts.vol = new Chart($('#chVolume'), {
+    type:'line',
+    data:{ labels, datasets: Object.entries(SECTORS).map(([k,v])=>({
+      label:v.name, data:mk(v.name.length*11), borderColor:v.hex, backgroundColor:v.hex+'22',
+      fill:true, tension:.38, borderWidth:1.8, pointRadius:0, pointHoverRadius:4 }))},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      plugins:{ legend:{ position:'bottom', labels:{ boxWidth:9, boxHeight:9, usePointStyle:true, pointStyle:'circle', font:{size:11}, padding:14 } } },
+      scales:{ x:{ grid:{display:false}, ticks:{ font:{size:10}, maxTicksLimit:12 } },
+               y:{ stacked:true, grid:{color:'#f1f5f9'}, ticks:{font:{size:10}} } }, animation:{duration:800} }
+  });
+
+  const topSrc = [...SOURCES].sort((a,b)=>b.items-a.items).slice(0,8);
+  dashCharts.src = new Chart($('#chSources'), {
+    type:'bar',
+    data:{ labels: topSrc.map(s=>s.domain), datasets:[{ data: topSrc.map(s=>s.items), backgroundColor:'#0f172a',
+      borderRadius:4, barThickness:16 }]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>` ${nf(c.parsed.x)} материалов` } } },
+      scales:{ x:{ grid:{color:'#f1f5f9'}, ticks:{font:{size:10}, callback:v=>v/1000+'k'} },
+               y:{ grid:{display:false}, ticks:{font:{size:10}} } } }
+  });
+}
+
+/* ==========================================================================
+   FEED
+   ========================================================================== */
+const FACETS = [
+  { key:'sector',   label:'Сектор',    opts: Object.entries(SECTORS).map(([k,v])=>[k,v.name]) },
+  { key:'srcType',  label:'Тип источника', opts: Object.entries(SRC_TYPE_LABEL).map(([k,v])=>[k,v]) },
+  { key:'sentiment',label:'Тональность', opts: Object.entries(SENT).map(([k,v])=>[k,v.label]) },
+  { key:'geo',      label:'География', opts: [...new Set(GEO)].slice(0,12).map(g=>[g,g]) },
+  { key:'source',   label:'Источник',  opts: SOURCES.filter(s=>s.status==='active').map(s=>[s.id,s.domain]) },
+];
+
+function renderFacets(){
+  $('#facetRows').innerHTML = FACETS.map(f => {
+    const counts = {};
+    f.opts.forEach(([v]) => counts[v] = 0);
+    ARTICLES.forEach(a => { const v = a[f.key]; if (counts[v] !== undefined) counts[v]++; });
+    return `
+    <div class="flex items-start gap-3">
+      <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 w-[110px] flex-none pt-1.5">${f.label}</span>
+      <div class="flex flex-wrap gap-1.5">
+        ${f.opts.map(([v,l]) => `
+          <button class="facet-chip ${state.filters[f.key].has(v)?'on':''}" data-facet="${f.key}" data-value="${esc(v)}"
+            style="border:1px solid #e2e8f0" class="px-2.5 py-1 rounded-full text-[11.5px] font-medium border hover:border-ink-400 transition">
+            ${esc(l)} <span class="code opacity-55 ml-0.5">${counts[v]||0}</span>
+          </button>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderActiveChips(){
+  const chips = [];
+  for (const f of FACETS){
+    for (const v of state.filters[f.key]){
+      const opt = f.opts.find(o => o[0] === v);
+      chips.push(`<button data-remove="${f.key}:${esc(v)}" class="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-md bg-ink-900 text-white text-[11px] font-medium">
+        ${esc(opt ? opt[1] : v)}
+        <span class="w-4 h-4 grid place-items-center rounded bg-white/20 hover:bg-white/30">✕</span></button>`);
+    }
+  }
+  if (state.filters.q) chips.push(`<button data-remove="q" class="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-md bg-brand-600 text-white text-[11px] font-medium">«${esc(state.filters.q)}» <span class="w-4 h-4 grid place-items-center rounded bg-white/20">✕</span></button>`);
+  $('#activeChips').innerHTML = chips.length ? chips.join('') : '<span class="text-[11.5px] text-slate-400">Фильтры не применены — показаны все материалы</span>';
+}
+
+function thumbFor(a){
+  const s = SECTORS[a.sector];
+  return `<svg viewBox="0 0 320 120" class="w-full h-[120px] block" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="g${a.id}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="${s.hex}"/><stop offset="100%" stop-color="#0f172a"/>
+      </linearGradient>
+      <pattern id="p${a.id}" width="26" height="26" patternUnits="userSpaceOnUse">
+        <circle cx="13" cy="13" r="1.4" fill="rgba(255,255,255,.16)"/>
+      </pattern>
+    </defs>
+    <rect width="320" height="120" fill="url(#g${a.id})"/>
+    <rect width="320" height="120" fill="url(#p${a.id})"/>
+    <path d="M0 96 L54 66 L104 84 L160 44 L214 68 L268 34 L320 58 L320 120 L0 120 Z" fill="rgba(255,255,255,.10)"/>
+    <text x="16" y="30" fill="rgba(255,255,255,.92)" font-family="Inter,sans-serif" font-size="12" font-weight="800" letter-spacing="1.4">${s.name.toUpperCase()}</text>
+  </svg>`;
+}
+
+function cardFor(a){
+  const s = SENT[a.sentiment];
+  return `
+  <article class="bg-white rounded-2xl border border-ink-100 shadow-card overflow-hidden hover:shadow-pop hover:-translate-y-0.5 transition group">
+    <div class="thumb relative">
+      ${thumbFor(a)}
+      <span class="absolute top-2.5 right-2.5 badge ${s.cls} px-2 py-1 rounded-md bg-white/95">${s.short}</span>
+      ${a.isNew ? '<span class="absolute top-2.5 left-2.5 badge bg-white/95 text-emerald-700 px-2 py-1 rounded-md flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-dot"></span>new</span>' : ''}
+    </div>
+    <div class="p-4">
+      <div class="flex items-center gap-1.5 text-[10.5px] text-slate-500 mb-2">
+        <span class="font-bold text-brand-600 truncate max-w-[150px]">${esc(a.domain)}</span>
+        <span class="text-slate-300">·</span>
+        <span class="code">${timeAgo(a.publishedAt)}</span>
+        <span class="ml-auto code flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>${nf(a.views)}</span>
+      </div>
+      <h3 class="text-[14px] font-bold leading-snug mb-2 group-hover:text-brand-700 transition cursor-pointer line-clamp-3">${esc(a.title)}</h3>
+      <p class="text-[12px] text-slate-500 leading-relaxed line-clamp-3 mb-3">${esc(a.body)}</p>
+      <div class="flex flex-wrap gap-1 mb-3">
+        ${a.persons.map(p=>`<span class="text-[10.5px] px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 font-medium">${esc(p)}</span>`).join('')}
+        ${a.orgs.map(o=>`<span class="text-[10.5px] px-1.5 py-0.5 rounded bg-ink-50 text-ink-600 font-medium">${esc(o)}</span>`).join('')}
+        <span class="text-[10.5px] px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 font-medium">${esc(a.geo)}</span>
+      </div>
+      <div class="flex items-center gap-2 pt-3 border-t border-ink-50">
+        <div class="flex-1 h-1 rounded-full bg-ink-100 overflow-hidden" title="Тональность: ${a.score.toFixed(2)}">
+          <div class="h-full rounded-full" style="width:${Math.abs(a.score)*100}%;background:${s.hex};margin-left:${a.score<0?0:50}%"></div>
+        </div>
+        <button data-open="${a.id}" class="text-[11px] font-bold text-brand-600 hover:text-brand-800">Открыть</button>
+      </div>
+    </div>
+  </article>`;
+}
+
+function filteredArticles(){
+  const f = state.filters;
+  const q = f.q.trim().toLowerCase();
+  let out = ARTICLES.filter(a => {
+    if (f.sector.size && !f.sector.has(a.sector)) return false;
+    if (f.srcType.size && !f.srcType.has(a.srcType)) return false;
+    if (f.sentiment.size && !f.sentiment.has(a.sentiment)) return false;
+    if (f.geo.size && !f.geo.has(a.geo)) return false;
+    if (f.source.size && !f.source.has(a.sourceId)) return false;
+    if (q && !(a.title + a.body + a.persons.join(' ') + a.orgs.join(' ') + a.source).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const sort = $('#feedSort')?.value || 'date';
+  if (sort === 'old') out.sort((a,b)=>a.publishedAt-b.publishedAt);
+  if (sort === 'sent') out.sort((a,b)=>a.score-b.score);
+  if (sort === 'src') out.sort((a,b)=>a.source.localeCompare(b.source));
+  return out;
+}
+
+function renderFeed(){
+  const list = filteredArticles();
+  $('#feedCount').textContent = `Найдено: ${list.length} из ${ARTICLES.length}`;
+  $('#feedGrid').innerHTML = list.length
+    ? list.slice(0, state.feedLimit).map(cardFor).join('')
+    : `<div class="col-span-full py-16 text-center"><div class="text-4xl mb-2">🔍</div><div class="font-bold text-[15px] mb-1">Ничего не найдено</div><div class="text-[12.5px] text-slate-500">Попробуйте изменить фильтры или поисковый запрос</div></div>`;
+  $('#feedMore').style.display = list.length > state.feedLimit ? '' : 'none';
+  renderActiveChips();
+}
+
+function openArticle(id){
+  const a = ARTICLES.find(x => x.id === id); if (!a) return;
+  const s = SENT[a.sentiment];
+  modal(a.title, `
+    <div class="mb-4">${thumbFor(a)}</div>
+    <div class="flex flex-wrap items-center gap-2 mb-4 text-[11.5px]">
+      <span class="badge ${s.cls} px-2 py-1 rounded">${s.label} · ${a.score.toFixed(2)}</span>
+      <span class="badge bg-ink-100 text-ink-700 px-2 py-1 rounded">${SECTORS[a.sector].name}</span>
+      <span class="badge bg-white border border-ink-200 text-slate-600 px-2 py-1 rounded">${SRC_TYPE_LABEL[a.srcType]}</span>
+      <span class="text-slate-500">${a.source} · ${a.publishedAt.toLocaleString('ru-RU')}</span>
+    </div>
+    <p class="text-[13.5px] leading-relaxed text-slate-700 mb-4">${esc(a.body)} ${esc(a.body)}</p>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="rounded-xl border border-ink-100 p-3 bg-ink-50">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Персоны (NER)</div>
+        <div class="flex flex-wrap gap-1">${a.persons.map(p=>`<span class="text-[11px] px-2 py-0.5 rounded bg-white border border-ink-200 font-medium">${esc(p)}</span>`).join('')}</div>
+      </div>
+      <div class="rounded-xl border border-ink-100 p-3 bg-ink-50">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Организации (NER)</div>
+        <div class="flex flex-wrap gap-1">${a.orgs.map(o=>`<span class="text-[11px] px-2 py-0.5 rounded bg-white border border-ink-200 font-medium">${esc(o)}</span>`).join('')}</div>
+      </div>
+    </div>
+    <div class="rounded-xl border border-brand-100 bg-brand-50 p-3">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-brand-700 mb-1.5">AI-саммари</div>
+      <div class="text-[12.5px] text-brand-900/80 leading-relaxed">${esc(a.body.split('.')[0])}. Ключевые драйверы — профильные программы и расширение мощностей. Тональность: ${s.label.toLowerCase()}.</div>
+    </div>
+    <div class="mt-4 pt-4 border-t border-ink-100 code text-[11px] text-slate-400 break-all">source: <a href="${a.url}" target="_blank" class="text-brand-600 hover:underline">${a.url}</a></div>
+  `, `<button data-close class="px-4 py-2 rounded-lg border border-ink-200 text-[12px] font-semibold hover:bg-ink-50">Закрыть</button>
+      <button class="px-4 py-2 rounded-lg bg-ink-900 text-white text-[12px] font-semibold hover:bg-ink-800" onclick="window.open('${a.url}','_blank')">Открыть оригинал ↗</button>`);
+}
+
+/* ==========================================================================
+   ANALYTICS
+   ========================================================================== */
+function renderAnKpis(){
+  const data = [
+    { l:'Охват публикаций', v:'124 380', d:'30 дней', c:'#3363ff' },
+    { l:'Средний скор тональности', v:'+0,14', d:'умеренно позитивный', c:'#059669' },
+    { l:'Уникальных персон', v:'1 284', d:'извлечено NER', c:'#8b5cf6' },
+    { l:'Критических сюжетов', v:'37', d:'требуют внимания', c:'#e11d48' },
+  ];
+  $('#anKpis').innerHTML = data.map(k => `
+    <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-4">
+      <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">${k.l}</div>
+      <div class="text-[24px] font-extrabold code tracking-tight mt-1" style="color:${k.c}">${k.v}</div>
+      <div class="text-[11px] text-slate-400 mt-0.5">${k.d}</div>
+    </div>`).join('');
+}
+
+let anCharts = {};
+function drawAnalyticsCharts(){
+  Object.values(anCharts).forEach(c => c.destroy());
+  anCharts = {};
+
+  const labels = Array.from({length:30},(_,i)=>{ const d=new Date(Date.now()-(29-i)*864e5); return d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'}); });
+
+  anCharts.sent = new Chart($('#chSentTime'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'Индекс тональности', data:labels.map((_,i)=>+(Math.sin(i/4)*.28+.12+Math.random()*.1-.05).toFixed(3)),
+        borderColor:'#3363ff', backgroundColor:'#3363ff1a', fill:true, tension:.4, borderWidth:2, pointRadius:0 },
+      { label:'Нулевая линия', data:labels.map(()=>0), borderColor:'#cbd5e1', borderDash:[4,4], borderWidth:1, pointRadius:0, fill:false },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      plugins:{ legend:{ position:'bottom', labels:{ boxWidth:9, boxHeight:9, usePointStyle:true, pointStyle:'circle', font:{size:11} } } },
+      scales:{ x:{ grid:{display:false}, ticks:{font:{size:9},maxTicksLimit:10} }, y:{ min:-0.6, max:0.6, grid:{color:'#f1f5f9'}, ticks:{font:{size:10}} } } }
+  });
+
+  const cs = SOURCES.filter(s=>s.status==='active').slice(0,7);
+  anCharts.cmp = new Chart($('#chCompare'), {
+    type:'bar',
+    data:{ labels: cs.map(s=>s.domain), datasets:[
+      { label:'Материалов (тыс.)', data: cs.map(s=>+(s.items/1000).toFixed(1)), backgroundColor:'#0f172a', borderRadius:4, yAxisID:'y' },
+      { label:'Доля негатива, %',  data: cs.map(()=>rnd(6,28)), backgroundColor:'#f59e0b', borderRadius:4, yAxisID:'y1' },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ boxWidth:9, boxHeight:9, usePointStyle:true, pointStyle:'circle', font:{size:11} } } },
+      scales:{ x:{ grid:{display:false}, ticks:{font:{size:9},maxRotation:40,minRotation:40} },
+               y:{ position:'left', grid:{color:'#f1f5f9'}, ticks:{font:{size:10}} },
+               y1:{ position:'right', min:0, max:40, grid:{display:false}, ticks:{font:{size:10}} } } }
+  });
+
+  anCharts.hours = new Chart($('#chHours'), {
+    type:'bar',
+    data:{ labels: Array.from({length:24},(_,i)=>i), datasets:[{ label:'Публикации',
+      data:[8,5,4,3,4,9,22,48,72,84,76,68,74,80,71,64,58,52,44,38,30,24,18,12],
+      backgroundColor:(c)=>{ const v=c.raw; return v>70?'#1e40af':v>45?'#3b82f6':v>20?'#93c5fd':'#dbeafe'; },
+      borderRadius:3, barPercentage:.86 }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{ x:{ grid:{display:false}, ticks:{font:{size:9}} }, y:{ grid:{color:'#f1f5f9'}, ticks:{font:{size:10}} } } }
+  });
+
+  renderHeatmap(); renderWordCloud(); renderInsights();
+}
+
+function renderHeatmap(){
+  const rows = Object.entries(SECTORS);
+  const cols = SOURCES.filter(s=>s.status==='active').slice(0,9);
+  const cell = (v) => {
+    const a = Math.min(1, v/100);
+    const bg = v > 70 ? '#1e40af' : v > 50 ? '#3b82f6' : v > 30 ? '#93c5fd' : v > 14 ? '#dbeafe' : '#f8fafc';
+    const tc = v > 50 ? '#fff' : '#64748b';
+    return `<td class="p-0.5"><div class="heat w-full h-8 rounded grid place-items-center text-[10px] font-bold code" style="background:${bg};color:${tc}">${v||''}</div></td>`;
+  };
+  $('#heatmapWrap').innerHTML = `
+    <table class="border-separate" style="border-spacing:2px;min-width:640px">
+      <thead><tr><th class="text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider pr-2 pb-1">Тема \\ Источник</th>
+        ${cols.map(c=>`<th class="text-[9px] font-semibold text-slate-500 pb-1 px-0.5 align-bottom" style="max-width:64px"><div class="truncate">${c.domain.replace('www.','')}</div></th>`).join('')}</tr></thead>
+      <tbody>${rows.map(([k,v])=>`<tr>
+        <td class="text-[11px] font-semibold pr-2 whitespace-nowrap"><span class="inline-block w-2 h-2 rounded-sm mr-1.5" style="background:${v.hex}"></span>${v.name}</td>
+        ${cols.map(()=>cell(Math.random()>.78 ? rnd(55,98) : rnd(0,48))).join('')}</tr>`).join('')}</tbody>
+    </table>`;
+}
+
+function renderWordCloud(){
+  const words = [['урожай',34],['Барнаул',42],['инвестиции',26],['зерно',30],['топливо',22],['бюджет',28],
+    ['благоустройство',18],['экспорт',21],['тарифы',16],['ЖКХ',24],['субсидии',15],['молочка',13],
+    ['дороги',19],['промпark',11],['зарплата',17],['медицина',14],['школы',12],['газификация',10]];
+  const max = Math.max(...words.map(w=>w[1]));
+  $('#wordCloud').innerHTML = words.map(([w,c]) => {
+    const sz = 11 + (c/max)*17;
+    const op = .35 + (c/max)*.65;
+    return `<span class="font-bold cursor-pointer hover:text-brand-600 transition" style="font-size:${sz}px;color:rgba(15,23,42,${op})">${w}</span>`;
+  }).join(' ');
+}
+
+function renderInsights(){
+  const ins = [
+    { t:'Рост освещения агросектора', d:'Упоминания темы «Агросектор» выросли на 31% за неделю. Основной драйвер — отчёты о намолоте зерна.', c:'#059669', k:'тренд' },
+    { t:'Негативный кластер по топливу', d:'8 материалов с критической тональностью по теме цен на ДТ в южных районах. Рекомендовано включить алерт.', c:'#e11d48', k:'риск' },
+    { t:'Новый источник-лидер', d:'Telegram-канал «Барнаул LIVE» вышел на 3-е место по скорости публикации, но доверие аудитории — 61%.', c:'#f59e0b', k:'источник' },
+    { t:'Снижение доли нейтральных материалов', d:'Доля нейтральной тональности упала с 44% до 38% — контент становится более оценочным.', c:'#3363ff', k:'сигнал' },
+  ];
+  $('#aiInsights').innerHTML = ins.map(i => `
+    <div class="flex gap-3 p-3 rounded-xl border border-ink-100 hover:border-ink-200 hover:bg-ink-50 transition cursor-pointer">
+      <span class="w-1 rounded-full flex-none" style="background:${i.c}"></span>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2 mb-0.5">
+          <span class="text-[12.5px] font-bold">${i.t}</span>
+          <span class="badge px-1.5 py-0.5 rounded" style="background:${i.c}18;color:${i.c}">${i.k}</span>
+        </div>
+        <div class="text-[11.5px] text-slate-500 leading-relaxed">${i.d}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* ==========================================================================
+   SOURCES
+   ========================================================================== */
+function renderSrcKpis(){
+  const active = SOURCES.filter(s=>s.status==='active').length;
+  const err = SOURCES.filter(s=>s.status==='error').length;
+  const d = [
+    { l:'Всего источников', v:SOURCES.length, s:'реестр тенанта' },
+    { l:'Активно', v:active, s:'опрос по расписанию' },
+    { l:'С ошибками', v:err, s:'требуют вмешательства' },
+    { l:'Собрано материалов', v:'124 380', s:'за всё время' },
+  ];
+  $('#srcKpis').innerHTML = d.map(k => `
+    <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-4">
+      <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">${k.l}</div>
+      <div class="text-[24px] font-extrabold code tracking-tight mt-1">${k.v}</div>
+      <div class="text-[11px] text-slate-400 mt-0.5">${k.s}</div>
+    </div>`).join('');
+}
+
+function renderSources(){
+  const q = state.srcQuery.toLowerCase();
+  let list = SOURCES.filter(s => {
+    if (state.srcTab === 'active' && s.status !== 'active') return false;
+    if (state.srcTab === 'error' && s.status !== 'error') return false;
+    if (state.srcTab === 'paused' && s.status !== 'paused') return false;
+    if (q && !(s.name + s.domain).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const stMap = {
+    active: ['bg-emerald-100 text-emerald-800','online'],
+    error:  ['bg-rose-100 text-rose-800','ошибка'],
+    paused: ['bg-ink-100 text-ink-600','пауза'],
+  };
+  $('#srcTable').innerHTML = list.map(s => `
+    <tr class="border-t border-ink-50">
+      <td class="px-5 py-3">
+        <div class="flex items-center gap-2.5">
+          <span class="w-7 h-7 rounded-lg grid place-items-center text-white text-[10px] font-extrabold flex-none" style="background:${SECTORS[s.cat].hex}">${s.domain.slice(0,2).toUpperCase()}</span>
+          <div class="min-w-0">
+            <div class="font-semibold truncate max-w-[240px]">${esc(s.name)}</div>
+            <div class="code text-[10.5px] text-slate-400 truncate">${esc(s.domain)}</div>
+          </div>
+        </div>
+      </td>
+      <td class="px-3 py-3 text-slate-600">${SRC_TYPE_LABEL[s.type]}</td>
+      <td class="px-3 py-3"><span class="code text-[10.5px] px-1.5 py-0.5 rounded bg-ink-50 border border-ink-100">${s.parser}</span></td>
+      <td class="px-3 py-3 code text-[11px] text-slate-500">${s.cron}</td>
+      <td class="px-3 py-3 text-right code font-semibold">${nf(s.items)}</td>
+      <td class="px-3 py-3 text-slate-500 text-[11.5px]">${s.last < 60 ? s.last+' мин назад' : s.last < 1440 ? Math.round(s.last/60)+' ч назад' : Math.round(s.last/1440)+' дн назад'}</td>
+      <td class="px-3 py-3">
+        <span class="badge ${stMap[s.status][0]} px-2 py-1 rounded inline-flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full ${s.status==='active'?'bg-emerald-600 pulse-dot':s.status==='error'?'bg-rose-600':'bg-slate-400'}"></span>${stMap[s.status][1]}
+          ${s.errs ? `<span class="code opacity-70 ml-0.5">×${s.errs}</span>` : ''}
+        </span>
+      </td>
+      <td class="px-5 py-3 text-right whitespace-nowrap">
+        <button data-src-act="parse" data-id="${s.id}" class="text-[11px] font-semibold px-2 py-1 rounded border border-ink-200 hover:bg-ink-50 mr-1">Парсить</button>
+        <button data-src-act="cfg" data-id="${s.id}" class="text-[11px] font-semibold px-2 py-1 rounded border border-ink-200 hover:bg-ink-50 mr-1">Конфиг</button>
+        <button data-src-act="toggle" data-id="${s.id}" class="text-[11px] font-semibold px-2 py-1 rounded border border-ink-200 hover:bg-ink-50">${s.status==='paused'?'Включить':'Пауза'}</button>
+      </td>
+    </tr>`).join('') || `<tr><td colspan="8" class="px-5 py-10 text-center text-slate-400 text-[13px]">Источники не найдены</td></tr>`;
+}
+
+const PARSER_CFG = {
+  PLAYWRIGHT:`{
+  "listSelector": "article, .news-item, .post",
+  "itemSelectors": { "title": "h3 a", "url": "a", "date": "time" },
+  "articleSelectors": {
+    "title":   "h1",
+    "content": "article .content, .entry-content, #news_text",
+    "author":  ".author, .news-author",
+    "date":    "time[datetime]"
+  },
+  "waitForSelector": ".news-list",
+  "maxItems": 40,
+  "renderJs": true,
+  "stealth": true,
+  "proxyPool": "ru-residential"
+}`,
+  RSS:`{
+  "feedUrl": "auto",
+  "enclosureAsImage": true,
+  "stripHtml": true,
+  "maxItems": 100
+}`,
+};
+
+function showSourceConfig(id){
+  const s = SOURCES.find(x=>x.id===id); if (!s) return;
+  modal(`Конфигурация парсера · ${s.domain}`, `
+    <div class="space-y-4">
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Название</label>
+          <input value="${esc(s.name)}" class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none focus:border-brand-400" /></div>
+        <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">URL</label>
+          <input value="https://${esc(s.domain)}" class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none focus:border-brand-400 code" /></div>
+        <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Тип источника</label>
+          <select class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none bg-white">${Object.entries(SRC_TYPE_LABEL).map(([k,v])=>`<option ${k===s.type?'selected':''}>${v}</option>`).join('')}</select></div>
+        <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Парсер</label>
+          <select class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none bg-white">${['PLAYWRIGHT','RSS','CHEERIO','TELEGRAM_BOT','VK_API','YOUTUBE_API'].map(p=>`<option ${p===s.parser?'selected':''}>${p}</option>`).join('')}</select></div>
+        <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Cron-расписание</label>
+          <input value="${s.cron}" class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none code" /></div>
+        <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Привязка к гео</label>
+          <input value="${esc(s.city)}" class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none" /></div>
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Инструкция парсинга (JSON)</label>
+        <textarea rows="14" class="w-full px-3 py-2 text-[11.5px] border border-ink-200 rounded-lg outline-none focus:border-brand-400 code bg-ink-50 leading-relaxed">${esc(PARSER_CFG[s.parser] || PARSER_CFG.PLAYWRIGHT)}</textarea>
+      </div>
+      <div class="flex flex-wrap gap-2 pt-1">
+        ${[['JS-рендеринг (Playwright)',true],['Обход антибота / stealth',true],['Прокси-пул',true],['Дедупликация по SimHash',true],['NER + тональность',true],['AI-саммари',true],['Авто-рубрикация',true],['Индексация в Meilisearch',true]]
+          .map(([l,on],i)=>`<label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-ink-200 text-[11.5px] font-medium cursor-pointer hover:bg-ink-50">
+            <input type="checkbox" ${on?'checked':''} class="accent-brand-600" /> ${l}</label>`).join('')}
+      </div>
+    </div>
+  `, `<button data-close class="px-4 py-2 rounded-lg border border-ink-200 text-[12px] font-semibold hover:bg-ink-50">Отмена</button>
+      <button data-save class="px-4 py-2 rounded-lg bg-ink-900 text-white text-[12px] font-semibold hover:bg-ink-800">Сохранить конфигурацию</button>`);
+  $('[data-save]').onclick = () => { closeModal(); toast(`Конфигурация «${s.domain}» сохранена`, 'ok'); };
+}
+
+function showAddSource(){
+  modal('Добавить источник', `
+    <div class="grid grid-cols-2 gap-3">
+      <div class="col-span-2"><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">URL ресурса</label>
+        <input placeholder="https://example22.ru" class="w-full px-3 py-2 text-[13px] border border-ink-200 rounded-lg outline-none focus:border-brand-400 code" /></div>
+      <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Тип</label>
+        <select class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none bg-white">${Object.values(SRC_TYPE_LABEL).map(v=>`<option>${v}</option>`).join('')}</select></div>
+      <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Парсер</label>
+        <select class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none bg-white">${['PLAYWRIGHT','RSS','CHEERIO','TELEGRAM_BOT','VK_API','YOUTUBE_API'].map(p=>`<option>${p}</option>`).join('')}</select></div>
+      <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Расписание (cron)</label>
+        <input value="*/15 * * * *" class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none code" /></div>
+      <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Гео-привязка</label>
+        <input placeholder="Барнаул" class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none" /></div>
+      <div class="col-span-2 rounded-xl bg-brand-50 border border-brand-100 p-3">
+        <div class="text-[11px] font-bold text-brand-800 mb-1">✦ Автоопределение селекторов</div>
+        <div class="text-[11.5px] text-brand-900/70 leading-relaxed">Система загрузит страницу через Playwright, построит DOM-дерево и предложит кандидаты на список материалов, заголовок, дату и тело статьи. Вам останется подтвердить.</div>
+      </div>
+    </div>
+  `, `<button data-close class="px-4 py-2 rounded-lg border border-ink-200 text-[12px] font-semibold hover:bg-ink-50">Отмена</button>
+      <button data-add class="px-4 py-2 rounded-lg bg-ink-900 text-white text-[12px] font-semibold hover:bg-ink-800">Добавить и запустить парсинг</button>`);
+  $('[data-add]').onclick = () => { closeModal(); toast('Источник добавлен. Запущен первичный прогон парсера…', 'ok'); setTimeout(()=>toast('Первичный парсинг завершён: 42 материала в очереди на NLP-обработку','ok'), 2200); };
+}
+
+function showDiscover(){
+  modal('AI-дискавери источников · Алтайский край', `
+    <div class="space-y-4">
+      <div class="rounded-xl border border-ink-200 p-3">
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Техническое задание для AI-агента</label>
+        <textarea rows="5" class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none focus:border-brand-400 leading-relaxed">Найти все значимые онлайн-источники Алтайского края: государственные открытые порталы, региональные и муниципальные СМИ, отраслевые ресурсы агросектора, пищевой промышленности и топливного сектора, Telegram-каналы и VK-сообщества. Ядро — Барнаул, затем Бийск, Рубцовск, Новоалтайск. Мелкие населённые пункты — опционально.</textarea>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        ${['Гос. порталы','СМИ','Агросектор','Пищевая пром.','Топливо/энергия','Статистика','Telegram','VK','Форумы'].map((t,i)=>`
+          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink-200 text-[11.5px] font-medium cursor-pointer hover:bg-ink-50">
+            <input type="checkbox" ${i<6?'checked':''} class="accent-brand-600" /> ${t}</label>`).join('')}
+      </div>
+      <div class="rounded-xl bg-ink-900 p-4 text-[11.5px] text-slate-300 code leading-relaxed">
+        <div class="text-emerald-400 mb-2">▸ agent.discover(region="Алтайский край", depth="districts")</div>
+        <div class="opacity-70">поиск по выдаче → классификация → ранжирование по авторитетности<br/>сегментация (тип / отрасль / гео) → ретроспективный анализ → каталогизация</div>
+        <div class="mt-3 pt-3 border-t border-white/10 text-slate-400">Ожидаемое время: 6–12 минут · ~350 кандидатур на проверку</div>
+      </div>
+    </div>
+  `, `<button data-close class="px-4 py-2 rounded-lg border border-ink-200 text-[12px] font-semibold hover:bg-ink-50">Отмена</button>
+      <button data-run class="px-4 py-2 rounded-lg bg-brand-600 text-white text-[12px] font-semibold hover:bg-brand-500">Запустить AI-дискавери</button>`);
+  $('[data-run]').onclick = () => { closeModal(); toast('AI-агент запущен. Прогресс появится в реестре источников.', 'ok'); };
+}
+
+/* ==========================================================================
+   ALERTS / REPORTS / USERS / SETTINGS / BILLING
+   ========================================================================== */
+const ALERTS = [
+  { n:'Негатив по топливному сектору', k:['дизтопливо','бензин','цены','дефицит'], s:['Все источники'], ch:['Telegram','Email'], on:true, fired:12, lvl:'high' },
+  { n:'Упоминания ключевых персон', k:['губернатор','мэр Барнаула','министр'], s:['GOV_PORTAL','NEWS_SITE'], ch:['Telegram'], on:true, fired:34, lvl:'mid' },
+  { n:'Инвестиционные соглашения', k:['инвестиции','соглашение','инвестпроект','млрд'], s:['Все источники'], ch:['Email','PDF-дайджест'], on:true, fired:8, lvl:'mid' },
+  { n:'ЖКХ и отопительный сезон', k:['ЖКХ','отопление','авария','отключение'], s:['Барнаул','Бийск','Рубцовск'], ch:['Telegram','SMS'], on:false, fired:47, lvl:'high' },
+  { n:'Агро: урожай и экспорт', k:['урожай','намолот','экспорт','зерно'], s:['altagro.ru','agroaltai'], ch:['Email'], on:true, fired:19, lvl:'low' },
+  { n:'Контроль репутации предприятия', k:['АО «Алтай-Нефть»','комбинат'], s:['Все источники'], ch:['Telegram','Email','SMS'], on:true, fired:3, lvl:'high' },
+];
+
+function renderAlerts(){
+  const lvl = { high:['Критический','bg-rose-100 text-rose-800'], mid:['Важный','bg-amber-100 text-amber-800'], low:['Информационный','bg-ink-100 text-ink-600'] };
+  $('#alertsGrid').innerHTML = ALERTS.map((a,i) => `
+    <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5 ${a.on?'':'opacity-60'}">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <h3 class="font-bold text-[14px] leading-snug">${esc(a.n)}</h3>
+          <span class="badge ${lvl[a.lvl][1]} px-2 py-0.5 rounded mt-1.5 inline-block">${lvl[a.lvl][0]}</span>
+        </div>
+        <div class="switch ${a.on?'on':''}" data-alert-toggle="${i}"></div>
+      </div>
+      <div class="mb-3">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Ключевые слова</div>
+        <div class="flex flex-wrap gap-1">${a.k.map(k=>`<span class="text-[10.5px] px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 font-medium code">${esc(k)}</span>`).join('')}</div>
+      </div>
+      <div class="mb-3">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Область</div>
+        <div class="text-[11.5px] text-slate-600">${a.s.map(esc).join(' · ')}</div>
+      </div>
+      <div class="pt-3 border-t border-ink-100 flex items-center justify-between">
+        <div class="flex gap-1">${a.ch.map(c=>`<span class="badge bg-ink-50 text-ink-600 px-1.5 py-0.5 rounded">${esc(c)}</span>`).join('')}</div>
+        <div class="text-[11px] text-slate-400 code">сработал ${a.fired}×</div>
+      </div>
+    </div>`).join('');
+}
+
+const REPORT_TPL = [
+  { n:'Медиаметрия региона', d:'Объём публикаций, охват, топ источников, динамика по темам', i:'📊', c:'#3363ff' },
+  { n:'Анализ тональности', d:'Распределение и тренды настроений по секторам и гео', i:'🎭', c:'#059669' },
+  { n:'Карта упоминаний персон', d:'NER-извлечение, частотность, контекст, связи', i:'👤', c:'#8b5cf6' },
+  { n:'Сравнение источников', d:'Авторитетность, скорость, уникальность, доля негатива', i:'⚖️', c:'#f59e0b' },
+  { n:'Отраслевой дайджест', d:'Агросектор / пищепром / ТЭК: сводка за период', i:'🌾', c:'#e11d48' },
+  { n:'Автообзор (AI)', d:'Готовая статья-обзор, сгенерированная по собранным данным', i:'✦', c:'#0f172a' },
+];
+
+function renderReports(){
+  $('#reportTemplates').innerHTML = REPORT_TPL.map(t => `
+    <div class="bg-white rounded-2xl border border-ink-100 shadow-card p-5 hover:shadow-pop hover:-translate-y-0.5 transition cursor-pointer group">
+      <div class="w-10 h-10 rounded-xl grid place-items-center text-[18px] mb-3" style="background:${t.c}14">${t.i}</div>
+      <h3 class="font-bold text-[14px] mb-1 group-hover:text-brand-700 transition">${t.n}</h3>
+      <p class="text-[11.5px] text-slate-500 leading-relaxed mb-4">${t.d}</p>
+      <div class="flex gap-2">
+        <button data-gen="pdf" data-tpl="${esc(t.n)}" class="flex-1 px-3 py-1.5 rounded-lg bg-ink-900 text-white text-[11.5px] font-semibold hover:bg-ink-800 transition">PDF</button>
+        <button data-gen="xlsx" data-tpl="${esc(t.n)}" class="flex-1 px-3 py-1.5 rounded-lg border border-ink-200 text-[11.5px] font-semibold hover:bg-ink-50 transition">Excel</button>
+        <button data-gen="live" data-tpl="${esc(t.n)}" class="px-3 py-1.5 rounded-lg border border-brand-200 bg-brand-50 text-brand-700 text-[11.5px] font-semibold hover:bg-brand-100 transition">Онлайн</button>
+      </div>
+    </div>`).join('');
+
+  const rows = [
+    ['Медиаметрия Алтайского края · сентябрь 2026','Медиаметрия','01.09 — 15.09.2026','completed','PDF · 2,4 МБ'],
+    ['ТЭК: мониторинг цен на топливо','Отраслевой','08.09 — 15.09.2026','completed','XLSX · 480 КБ'],
+    ['Упоминания персон за Q3','NER-анализ','01.07 — 30.09.2026','running','—'],
+    ['Дайджест агросектора (неделя 37)','Автообзор','08.09 — 14.09.2026','completed','PDF · 1,1 МБ'],
+    ['Сравнение региональных СМИ','Источники','01.08 — 31.08.2026','failed','—'],
+  ];
+  const st = { completed:['Готов','bg-emerald-100 text-emerald-800'], running:['Формируется','bg-brand-100 text-brand-800'], failed:['Ошибка','bg-rose-100 text-rose-800'] };
+  $('#reportsTable').innerHTML = rows.map(r => `
+    <tr class="border-t border-ink-50">
+      <td class="px-5 py-3 font-semibold">${esc(r[0])}</td>
+      <td class="px-3 py-3 text-slate-500">${esc(r[1])}</td>
+      <td class="px-3 py-3 code text-[11px] text-slate-500">${esc(r[2])}</td>
+      <td class="px-3 py-3"><span class="badge ${st[r[3]][1]} px-2 py-1 rounded">${st[r[3]][0]}</span></td>
+      <td class="px-3 py-3 code text-[11px] text-slate-500">${esc(r[4])}</td>
+      <td class="px-5 py-3 text-right">
+        ${r[3]==='completed' ? `<button data-action="export" class="text-[11px] font-semibold px-2.5 py-1 rounded border border-ink-200 hover:bg-ink-50">Скачать</button>
+          <button data-action="share" class="text-[11px] font-semibold px-2.5 py-1 rounded border border-ink-200 hover:bg-ink-50 ml-1">Поделиться</button>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+const USERS = [
+  { n:'Алексей Прохоров', e:'a.prokhorov@altai.media', r:'ADMIN', last:'сейчас', on:true },
+  { n:'Мария Ковалёва',   e:'m.kovaleva@altai.media',  r:'ANALYST', last:'12 мин назад', on:true },
+  { n:'Дмитрий Есин',     e:'d.esin@altai.media',      r:'EDITOR', last:'1 ч назад', on:true },
+  { n:'Ольга Тимошина',   e:'o.timoshina@altai.media', r:'MODERATOR', last:'3 ч назад', on:true },
+  { n:'Сергей Башлыков',  e:'s.bashlykov@client.ru',   r:'VIEWER', last:'2 дн назад', on:false },
+  { n:'Ирина Лаптева',    e:'i.lapteva@agro22.ru',     r:'VIEWER', last:'5 ч назад', on:true },
+];
+const ROLES = {
+  SUPER_ADMIN:['Полный доступ','Управление тенантами и тарифами'],
+  ADMIN:['Управление тенантом','Источники, пользователи, модерация'],
+  ANALYST:['Аналитика и отчёты','Экспорт, конструктор отчётов'],
+  EDITOR:['Контент и рубрикация','Правка материалов, саммари'],
+  MODERATOR:['Модерация','Одобрение / отклонение материалов'],
+  VIEWER:['Лента и базовые фильтры','Персональные алерты'],
+};
+
+function renderUsers(){
+  const rc = { ADMIN:'bg-brand-100 text-brand-800', ANALYST:'bg-violet-100 text-violet-800', EDITOR:'bg-emerald-100 text-emerald-800', MODERATOR:'bg-amber-100 text-amber-800', VIEWER:'bg-ink-100 text-ink-600' };
+  $('#usersTable').innerHTML = USERS.map(u => `
+    <tr class="border-t border-ink-50">
+      <td class="px-5 py-3">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-full bg-gradient-to-br from-ink-300 to-ink-500 grid place-items-center text-white text-[11px] font-bold flex-none">${u.n.split(' ').map(x=>x[0]).join('')}</span>
+          <div><div class="font-semibold">${esc(u.n)}</div><div class="text-[10.5px] text-slate-400 code">${esc(u.e)}</div></div>
+        </div>
+      </td>
+      <td class="px-3 py-3"><select class="text-[11px] font-bold rounded-md px-2 py-1 border border-ink-200 bg-white outline-none ${rc[u.r]}">${Object.keys(ROLES).map(r=>`<option ${r===u.r?'selected':''}>${r}</option>`).join('')}</select></td>
+      <td class="px-3 py-3 text-[11px] text-slate-500">${ROLES[u.r][0]}</td>
+      <td class="px-3 py-3 text-[11.5px] text-slate-500">${u.last}</td>
+      <td class="px-3 py-3"><span class="badge ${u.on?'bg-emerald-100 text-emerald-800':'bg-ink-100 text-ink-500'} px-2 py-0.5 rounded">${u.on?'активен':'заблокирован'}</span></td>
+      <td class="px-5 py-3 text-right"><button class="text-[11px] font-semibold px-2.5 py-1 rounded border border-ink-200 hover:bg-ink-50">Настроить</button></td>
+    </tr>`).join('');
+
+  $('#roleMatrix').innerHTML = Object.entries(ROLES).map(([r,d]) => `
+    <div class="rounded-xl border border-ink-100 p-3 hover:border-ink-200 transition">
+      <div class="badge text-ink-700 bg-ink-100 px-2 py-0.5 rounded mb-1.5 inline-block">${r}</div>
+      ${d.map(x=>`<div class="text-[11.5px] text-slate-500 leading-relaxed flex gap-1.5"><span class="text-emerald-600 flex-none">✓</span>${x}</div>`).join('')}
+    </div>`).join('');
+}
+
+function renderSettings(){
+  const integ = [
+    ['ЮKassa', 'Эквайринг, подписки, возвраты, чеки 54-ФЗ', 'connected', '#8b5cf6'],
+    ['Telegram Bot API', 'Уведомления, алерты, бот-интерфейс ленты', 'connected', '#0ea5e9'],
+    ['GigaChat API', 'NER, тональность, саммари, авто-рубрикация', 'connected', '#059669'],
+    ['Meilisearch', 'Полнотекстовый поиск и facets', 'connected', '#f59e0b'],
+    ['Yandex Object Storage', 'S3 для изображений, PDF, бэкапов', 'connected', '#e11d48'],
+    ['Unisender', 'Email-рассылки дайджестов', 'connected', '#3363ff'],
+    ['Дадата', 'Обогащение: ЕГРЮЛ, адреса, ИНН', 'off', '#64748b'],
+    ['Яндекс.Геокодер', 'Привязка материалов к координатам', 'off', '#64748b'],
+    ['DeepL / Yandex Translate', 'Мультиязычность для экспансии', 'off', '#64748b'],
+  ];
+  $('#integrations').innerHTML = integ.map(([n,d,st,c]) => `
+    <div class="flex items-center gap-3 py-2.5 border-b border-ink-50 last:border-0">
+      <span class="w-8 h-8 rounded-lg grid place-items-center text-white text-[12px] font-extrabold flex-none" style="background:${st==='connected'?c:'#cbd5e1'}">${n[0]}</span>
+      <div class="flex-1 min-w-0">
+        <div class="text-[12.5px] font-semibold">${n}</div>
+        <div class="text-[11px] text-slate-500 truncate">${d}</div>
+      </div>
+      <div class="switch ${st==='connected'?'on':''}" data-switch></div>
+    </div>`).join('');
+
+  const nlp = [
+    ['Дедупликация (SimHash)', true, 'Отсекает перепечатки между источниками'],
+    ['Извлечение сущностей (NER)', true, 'Персоны, организации, локации, даты'],
+    ['Анализ тональности', true, '5 градаций: от критической до очень позитивной'],
+    ['AI-саммари', true, 'Краткое изложение длинных материалов'],
+    ['Авто-рубрикация', true, 'Отраслевая классификация по 7 секторам'],
+    ['Детекция фейков / маркировка', false, 'Сверка с первоисточником, флаг достоверности'],
+    ['Перевод на другие языки', false, 'Готовность к выходу на новые рынки'],
+  ];
+  $('#nlpPipeline').innerHTML = nlp.map(([n,on,d]) => `
+    <div class="flex items-center gap-3 py-2.5 border-b border-ink-50 last:border-0">
+      <span class="w-5 h-5 rounded-full grid place-items-center text-[10px] font-bold flex-none ${on?'bg-emerald-100 text-emerald-700':'bg-ink-100 text-slate-400'}">${on?'✓':'–'}</span>
+      <div class="flex-1 min-w-0"><div class="text-[12.5px] font-semibold">${n}</div><div class="text-[11px] text-slate-500 truncate">${d}</div></div>
+      <div class="switch ${on?'on':''}" data-switch></div>
+    </div>`).join('');
+
+  $('#tenantInfo').innerHTML = [
+    ['Tenant ID','tnt_altai_krai_01'],['Slug','altai-krai'],['Регион','Алтайский край'],
+    ['Ядро','Барнаул'],['Часовой пояс','Asia/Barnaul (UTC+7)'],['Тариф','PRO · до 15.10.2026'],
+  ].map(([k,v])=>`<div class="flex justify-between gap-3"><span class="text-slate-500">${k}</span><span class="font-semibold code text-[11.5px] truncate">${v}</span></div>`).join('');
+
+  $('#localeInfo').innerHTML = `
+    <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Основной язык</label>
+      <select class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none bg-white"><option>Русский (ru-RU)</option><option>English (en-US)</option><option>Қазақша (kk-KZ)</option></select></div>
+    <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Часовой пояс</label>
+      <select class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none bg-white"><option>Asia/Barnaul (UTC+7)</option><option>Europe/Moscow (UTC+3)</option></select></div>
+    <div><label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Хранение данных</label>
+      <select class="w-full px-3 py-2 text-[12.5px] border border-ink-200 rounded-lg outline-none bg-white"><option>РФ (152-ФЗ), ЦОД Yandex Cloud</option><option>EU (GDPR), Frankfurt</option></select></div>
+    <div class="rounded-lg bg-amber-50 border border-amber-200 p-2.5 text-[11px] text-amber-900 leading-relaxed">Мульти-юродикция: при смене региона хранения платформа переносит данные тенанта и применяет соответствующий профиль комплаенса.</div>`;
+}
+
+const PLANS = [
+  { n:'FREE', p:'0 ₽', d:'Знакомство с платформой', f:['2 источника','500 материалов/мес','Лента и базовые фильтры','1 пользователь'], cur:false, hi:false },
+  { n:'STARTER', p:'4 900 ₽', d:'Малый мониторинг', f:['10 источников','10 000 материалов/мес','Базовая аналитика','Email-алерты','3 пользователя'], cur:false, hi:false },
+  { n:'PRO', p:'19 900 ₽', d:'Полная аналитика региона', f:['50 источников','200 000 материалов/мес','NER, тональность, саммари','Все каналы алертов','PDF / Excel отчёты','API-доступ','10 пользователей'], cur:true, hi:true },
+  { n:'ENTERPRISE', p:'по запросу', d:'Мульти-регион, SLA', f:['Безлимит источников','Выделенная инфраструктура','On-premise / приватный контур','SSO, кастомные роли','Персональный менеджер'], cur:false, hi:false },
+];
+
+function renderBilling(){
+  $('#plans').innerHTML = PLANS.map(p => `
+    <div class="rounded-2xl border p-5 relative ${p.hi?'border-brand-500 bg-gradient-to-b from-brand-50 to-white shadow-pop':'border-ink-100 bg-white shadow-card'}">
+      ${p.hi?'<span class="absolute -top-2.5 left-5 badge bg-brand-600 text-white px-2 py-1 rounded">текущий тариф</span>':''}
+      <div class="text-[12px] font-bold uppercase tracking-wider ${p.hi?'text-brand-700':'text-slate-500'}">${p.n}</div>
+      <div class="text-[26px] font-extrabold tracking-tight mt-1">${p.p}<span class="text-[12px] font-semibold text-slate-400">/мес</span></div>
+      <div class="text-[11.5px] text-slate-500 mb-4">${p.d}</div>
+      <ul class="space-y-1.5 mb-5">${p.f.map(x=>`<li class="flex gap-2 text-[12px] text-slate-600"><span class="${p.hi?'text-brand-600':'text-emerald-600'} flex-none">✓</span>${x}</li>`).join('')}</ul>
+      <button class="w-full py-2 rounded-lg text-[12px] font-semibold transition ${p.cur?'bg-ink-100 text-slate-400 cursor-default':p.hi?'bg-brand-600 text-white hover:bg-brand-500':'bg-ink-900 text-white hover:bg-ink-800'}">${p.cur?'Активен':'Перейти'}</button>
+    </div>`).join('');
+
+  const pays = [
+    ['15.08.2026','Тариф PRO · продление на 1 месяц','ЮKassa · карта ••4521','19 900 ₽','paid'],
+    ['15.07.2026','Тариф PRO · продление на 1 месяц','ЮKassa · счёт для юрлица','19 900 ₽','paid'],
+    ['15.06.2026','Тариф PRO · продление на 1 месяц','ЮKassa · карта ••4521','19 900 ₽','paid'],
+    ['02.06.2026','Доп. пакет: 100k AI-токенов','ЮKassa · карта ••4521','3 200 ₽','refunded'],
+  ];
+  const ps = { paid:['Оплачен','bg-emerald-100 text-emerald-800'], refunded:['Возврат','bg-amber-100 text-amber-800'] };
+  $('#paymentsTable').innerHTML = pays.map(p => `
+    <tr class="border-t border-ink-50">
+      <td class="px-5 py-3 code text-[11.5px] text-slate-500">${p[0]}</td>
+      <td class="px-3 py-3 font-semibold">${esc(p[1])}</td>
+      <td class="px-3 py-3 text-slate-500">${esc(p[2])}</td>
+      <td class="px-3 py-3 text-right code font-bold">${p[3]}</td>
+      <td class="px-5 py-3"><span class="badge ${ps[p[4]][1]} px-2 py-0.5 rounded">${ps[p[4]][0]}</span></td>
+    </tr>`).join('');
+}
+
+/* ==========================================================================
+   ИНИЦИАЛИЗАЦИЯ
+   ========================================================================== */
+function bind(){
+  document.addEventListener('click', e => {
+    const navBtn = e.target.closest('[data-nav]');
+    if (navBtn){ go(navBtn.dataset.nav); return; }
+
+    const facet = e.target.closest('[data-facet]');
+    if (facet){
+      const k = facet.dataset.facet, v = facet.dataset.value;
+      state.filters[k].has(v) ? state.filters[k].delete(v) : state.filters[k].add(v);
+      facet.classList.toggle('on');
+      renderFeed(); return;
+    }
+
+    const rem = e.target.closest('[data-remove]');
+    if (rem){
+      const val = rem.dataset.remove;
+      if (val === 'q'){ state.filters.q=''; $('#feedSearch').value=''; }
+      else { const [k,v] = val.split(':'); state.filters[k].delete(v); }
+      renderFacets(); renderFeed(); return;
+    }
+
+    const openA = e.target.closest('[data-open]');
+    if (openA){ openArticle(openA.dataset.open); return; }
+
+    const srcAct = e.target.closest('[data-src-act]');
+    if (srcAct){
+      const s = SOURCES.find(x=>x.id===srcAct.dataset.id);
+      if (srcAct.dataset.srcAct === 'parse'){ toast(`Задача постановлена в очередь: ${s.domain}`, 'info'); setTimeout(()=>toast(`Парсинг ${s.domain} завершён: +${rnd(3,28)} материалов`,'ok'), rnd(1500,3000)); }
+      if (srcAct.dataset.srcAct === 'cfg') showSourceConfig(s.id);
+      if (srcAct.dataset.srcAct === 'toggle'){ s.status = s.status==='paused'?'active':'paused'; renderSources(); toast(`Источник «${s.name}» ${s.status==='paused'?'поставлен на паузу':'возобновлён'}`, 'ok'); }
+      return;
+    }
+
+    const at = e.target.closest('[data-alert-toggle]');
+    if (at){ const i = +at.dataset.alertToggle; ALERTS[i].on = !ALERTS[i].on; at.classList.toggle('on'); toast(`Правило «${ALERTS[i].n}» ${ALERTS[i].on?'включено':'выключено'}`, ALERTS[i].on?'ok':'warn'); return; }
+
+    const sw = e.target.closest('[data-switch]');
+    if (sw){ sw.classList.toggle('on'); return; }
+
+    const gen = e.target.closest('[data-gen]');
+    if (gen){
+      const tpl = gen.dataset.tpl, fmt = gen.dataset.gen;
+      if (fmt === 'live'){ go('analytics'); toast(`Онлайн-дашборд «${tpl}» открыт`, 'ok'); }
+      else toast(`Отчёт «${tpl}» поставлен в очередь формирования (${fmt.toUpperCase()})`, 'info');
+      return;
+    }
+
+    const act = e.target.closest('[data-action]');
+    if (act){
+      const a = act.dataset.action;
+      if (a === 'export') toast(`Экспорт в ${(act.dataset.fmt||'pdf').toUpperCase()} запущен. Файл придёт на email.`, 'ok');
+      if (a === 'invite') toast('Приглашение отправлено на указанный email', 'ok');
+      if (a === 'share') toast('Публичная ссылка на отчёт скопирована', 'ok');
+      return;
+    }
+  });
+
+  $('#feedSearch').addEventListener('input', e => { state.filters.q = e.target.value; state.feedLimit = 12; renderFeed(); });
+  $('#feedSort').addEventListener('change', renderFeed);
+  $('#feedReset').addEventListener('click', () => {
+    Object.keys(state.filters).forEach(k => k === 'q' ? state.filters.q = '' : state.filters[k].clear());
+    $('#feedSearch').value = ''; renderFacets(); renderFeed(); toast('Фильтры сброшены', 'info');
+  });
+  $('#feedMore').addEventListener('click', () => { state.feedLimit += 12; renderFeed(); });
+  $('#btnSaveFilter').addEventListener('click', () => toast('Фильтр сохранён в личные пресеты', 'ok'));
+  $('#btnAddSource').addEventListener('click', showAddSource);
+  $('#btnDiscover').addEventListener('click', showDiscover);
+  $('#btnAddAlert').addEventListener('click', () => toast('Конструктор правил будет доступен после подтверждения тарифа', 'info'));
+  $('#srcSearch').addEventListener('input', e => { state.srcQuery = e.target.value; renderSources(); });
+
+  $$('#srcTabs .tab').forEach(t => t.addEventListener('click', () => {
+    $$('#srcTabs .tab').forEach(x => { x.classList.remove('on'); x.classList.add('text-slate-500'); });
+    t.classList.add('on'); t.classList.remove('text-slate-500');
+    state.srcTab = t.dataset.tab; renderSources();
+  }));
+
+  $$('#dashRange button').forEach(b => b.addEventListener('click', () => {
+    $$('#dashRange button').forEach(x => { x.classList.remove('bg-ink-900','text-white'); x.classList.add('text-slate-500'); });
+    b.classList.add('bg-ink-900','text-white'); b.classList.remove('text-slate-500');
+    state.range = b.dataset.range; drawDashboardCharts();
+  }));
+
+  $('#globalSearch').addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ state.filters.q = e.target.value; $('#feedSearch').value = e.target.value; go('feed'); renderFacets(); renderFeed(); }
+  });
+  document.addEventListener('keydown', e => { if ((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); $('#globalSearch').focus(); } });
+
+  $('#btnParse').addEventListener('click', () => {
+    toast('Запущен внеплановый прогон всех активных источников (18 задач)', 'info');
+    setTimeout(()=>toast('Очередь обработана: +146 новых материалов, 3 дубликата отсечены', 'ok'), 3200);
+  });
+  $('#btnBell').addEventListener('click', () => {
+    modal('Уведомления', `
+      <div class="space-y-2">${[
+        ['crit','Критический сюжет: рост цен на ДТ в южных районах','12 мин назад','8 материалов за час'],
+        ['warn','Парсер biysk22.ru: 6 неудачных попыток подряд','1 ч назад','Проверьте селекторы или anti-bot'],
+        ['info','Отчёт «Медиаметрия · сентябрь» готов','3 ч назад','PDF, 2,4 МБ'],
+        ['info','AI-дискавери нашёл 34 новых кандидата','вчера','Требуется модерация'],
+      ].map(([t,ti,when,sub]) => `
+        <div class="flex gap-3 p-3 rounded-xl border border-ink-100 hover:bg-ink-50 cursor-pointer">
+          <span class="w-2 h-2 rounded-full mt-1.5 flex-none ${t==='crit'?'bg-rose-500':t==='warn'?'bg-amber-500':'bg-brand-500'}"></span>
+          <div class="flex-1 min-w-0"><div class="text-[12.5px] font-semibold leading-snug">${ti}</div>
+          <div class="text-[11px] text-slate-500 mt-0.5">${sub}</div></div>
+          <span class="text-[10.5px] text-slate-400 code flex-none">${when}</span>
+        </div>`).join('')}</div>`,
+      `<button data-close class="px-4 py-2 rounded-lg border border-ink-200 text-[12px] font-semibold hover:bg-ink-50">Закрыть</button>
+       <button class="px-4 py-2 rounded-lg bg-ink-900 text-white text-[12px] font-semibold hover:bg-ink-800" onclick="document.getElementById('bellCount').textContent='0'">Прочитать все</button>`);
+  });
+
+  $('#btnUser').addEventListener('click', () => {
+    modal('Профиль и роль', `
+      <div class="flex items-center gap-4 mb-5 pb-5 border-b border-ink-100">
+        <span class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-800 grid place-items-center text-white text-[18px] font-bold">АП</span>
+        <div><div class="font-bold text-[16px]">Алексей Прохоров</div>
+        <div class="text-[12px] text-slate-500 code">a.prokhorov@altai.media</div>
+        <div class="text-[11px] text-slate-400 mt-1">Тенант: Алтайский край · API-ключ: <span class="code">ak_live_••••4f2a</span></div></div>
+      </div>
+      <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Активная роль (демо-переключение)</label>
+      <div class="grid grid-cols-2 gap-2 mb-4">${Object.keys(ROLES).filter(r=>r!=='SUPER_ADMIN').map(r => `
+        <button data-role="${r}" class="text-left p-3 rounded-xl border text-[12px] font-semibold transition ${state.role===r?'border-brand-500 bg-brand-50 text-brand-800':'border-ink-200 hover:bg-ink-50'}">
+          <div>${r}</div><div class="text-[10.5px] font-normal text-slate-500 mt-0.5">${ROLES[r][0]}</div></button>`).join('')}</div>
+      <div class="rounded-xl bg-ink-50 border border-ink-100 p-3 text-[11.5px] text-slate-600 leading-relaxed">Роль влияет на доступные разделы и операции. Изменение применяется к текущей сессии немедленно.</div>
+    `, `<button data-close class="px-4 py-2 rounded-lg border border-ink-200 text-[12px] font-semibold hover:bg-ink-50">Закрыть</button>`);
+    $$('[data-role]').forEach(b => b.onclick = () => {
+      state.role = b.dataset.role;
+      $('#userRoleLabel').textContent = state.role + ' · Алтайский край';
+      closeModal(); toast(`Роль переключена: ${state.role}`, 'ok');
+    });
+  });
+
+  $('#tenantBtn').addEventListener('click', () => {
+    modal('Выбор тенанта / региона', `
+      <div class="space-y-2">${[['Алтайский край','Барнаул · 18 источников · PRO',true],['Республика Алтай','Горно-Алтайск · 7 источников · STARTER',false],['Новосибирская область','подготовка · 0 источников',false],['+ Создать новый тенант','мульти-региональная конфигурация',false]].map(([n,d,cur])=>`
+        <button class="w-full text-left p-3 rounded-xl border flex items-center gap-3 transition ${cur?'border-brand-500 bg-brand-50':'border-ink-200 hover:bg-ink-50'}">
+          <span class="w-8 h-8 rounded-lg ${cur?'bg-brand-600':'bg-ink-200'} grid place-items-center text-white text-[11px] font-bold flex-none">${n.slice(0,2).toUpperCase()}</span>
+          <span class="flex-1 min-w-0"><span class="block text-[13px] font-bold">${n}</span><span class="block text-[11px] text-slate-500">${d}</span></span>
+          ${cur?'<span class="badge text-brand-700 bg-white px-2 py-0.5 rounded">активен</span>':''}
+        </button>`).join('')}</div>`,
+      `<button data-close class="px-4 py-2 rounded-lg border border-ink-200 text-[12px] font-semibold hover:bg-ink-50">Закрыть</button>`);
+  });
+}
+
+/* ---------- WEBSOCKET-СИМУЛЯЦИЯ ---------- */
+function startLive(){
+  const pool = ARTICLES.slice(0, 40);
+  setInterval(() => {
+    if (state.view !== 'dashboard') return;
+    const a = { ...pick(pool), id: 'live' + Date.now(), publishedAt: new Date(), isNew: true };
+    const row = document.createElement('div');
+    row.innerHTML = tickerRow(a);
+    const el = row.firstElementChild;
+    const wrap = $('#liveTicker');
+    wrap.prepend(el);
+    while (wrap.children.length > 9) wrap.lastElementChild.remove();
+    const cur = parseInt($('#bellCount').textContent) || 0;
+    $('#bellCount').textContent = Math.min(99, cur + 1);
+  }, 7000);
+
+  // «шевеление» очереди парсеров
+  setInterval(() => {
+    const q = parseInt($('#statQueue').textContent);
+    $('#statQueue').textContent = Math.max(0, Math.min(24, q + rnd(-2, 2)));
+  }, 4000);
+}
+
+/* ---------- ЗАПУСК ---------- */
+renderNav();
+renderKpis();
+renderTicker();
+renderSentimentLegend();
+renderPersons();
+renderGeo();
+renderParserHealth();
+renderFacets();
+renderFeed();
+renderAnKpis();
+renderSrcKpis();
+renderSources();
+renderAlerts();
+renderReports();
+renderUsers();
+renderSettings();
+renderBilling();
+bind();
+go('dashboard');
+startLive();
+
+setTimeout(() => toast('Соединение WebSocket установлено. Поток материалов активен.', 'ok'), 900);
+setTimeout(() => toast('Внимание: парсер biysk22.ru — 6 неудачных попыток подряд.', 'warn'), 5000);
+</script>
+</body>
+</html>
