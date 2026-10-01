@@ -28,6 +28,8 @@ make dev
 - Документация API (Swagger): <http://localhost:4000/docs>
 - Проверки: `GET :4000/healthz`, `GET :4000/readyz` (БД + Redis), `GET :4000/metrics` (Prometheus; в production только с токеном)
 
+**Если порт занят другим проектом.** Порты задаются в `.env`: `WEB_PORT` (портал, 3000), `API_PORT` (API, 4000), `POSTGRES_PORT` (5432), `REDIS_PORT` (6379). Поменяйте нужный и перезапустите `make dev`; адрес портала для проверки Origin и адрес API для проксирования вычисляются из портов сами. Для PostgreSQL и Redis после смены порта поправьте ещё и адреса в `.env` (`DATABASE_URL`, `WORKER_DATABASE_URL`, `MIGRATE_DATABASE_URL`, `REDIS_URL`). Если `.env` создан старой версией проекта, удалите его (`rm .env`) и выполните `make setup` — база и данные не затрагиваются.
+
 **Без `make` (например, Windows без WSL)** — те же шаги по одному:
 
 ```bash

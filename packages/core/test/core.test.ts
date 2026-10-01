@@ -145,3 +145,19 @@ describe('домен', () => {
     expect(new AppError('rate_limited', 'x').status).toBe(429);
   });
 });
+
+describe('порты и адрес портала', () => {
+  const base = { DATABASE_URL: 'postgres://x', NODE_ENV: 'development' };
+  it('адрес портала по умолчанию строится из WEB_PORT', () => {
+    expect(loadConfig(base).APP_BASE_URL).toBe('http://localhost:3000');
+    expect(loadConfig({ ...base, WEB_PORT: '3010' }).APP_BASE_URL).toBe('http://localhost:3010');
+  });
+  it('явный APP_BASE_URL важнее WEB_PORT', () => {
+    expect(
+      loadConfig({ ...base, WEB_PORT: '3010', APP_BASE_URL: 'https://media.example.ru' }).APP_BASE_URL,
+    ).toBe('https://media.example.ru');
+  });
+  it('некорректный порт отвергается', () => {
+    expect(() => loadConfig({ ...base, WEB_PORT: '99999' })).toThrow(/WEB_PORT/);
+  });
+});

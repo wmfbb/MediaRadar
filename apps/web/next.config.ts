@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import type { NextConfig } from 'next';
 
-const apiOrigin = process.env.API_ORIGIN ?? 'http://localhost:4000';
+const apiOrigin = process.env.API_ORIGIN ?? `http://localhost:${process.env.API_PORT ?? 4000}`;
 const isProd = process.env.NODE_ENV === 'production';
 const wsOrigin = process.env.NEXT_PUBLIC_WS_URL ? new URL(process.env.NEXT_PUBLIC_WS_URL).origin : '';
 

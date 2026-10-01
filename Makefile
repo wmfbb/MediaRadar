@@ -10,7 +10,7 @@ export
 	@cp .env.example .env
 	@echo "Создан .env из .env.example"
 
-COMPOSE := docker compose -f deploy/docker-compose.dev.yml
+COMPOSE := docker compose --env-file .env -f deploy/docker-compose.dev.yml
 
 .PHONY: help setup deps-up deps-down deps-reset db-migrate db-seed db-reset db-demo dev build lint typecheck format format-check test e2e e2e-install check clean
 
@@ -43,8 +43,8 @@ db-demo: ## Заменить данные синтетическими (для �
 
 dev: setup deps-up db-migrate db-seed ## Всё сразу: зависимости, БД, реальные источники, API + воркер (сбор идёт сам) + портал
 	@echo ""
-	@echo "Портал: http://localhost:3000   (вход: a.prokhorov@altai.media / Demo-Passw0rd!)"
-	@echo "API:    http://localhost:4000/docs"
+	@echo "Портал: http://localhost:$${WEB_PORT:-3000}   (вход: a.prokhorov@altai.media / Demo-Passw0rd!)"
+	@echo "API:    http://localhost:$${API_PORT:-4000}/docs"
 	@echo ""
 	pnpm dev
 

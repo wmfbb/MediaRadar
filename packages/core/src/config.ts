@@ -10,7 +10,9 @@ const bool = z
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  APP_BASE_URL: z.string().url().default('http://localhost:3000'),
+  /** Адрес портала для писем и проверки Origin. Не задан — http://localhost:<WEB_PORT>. */
+  APP_BASE_URL: z.string().url().optional(),
+  WEB_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   API_HOST: z.string().default('0.0.0.0'),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL обязателен'),
@@ -36,8 +38,9 @@ const schema = z.object({
   TRUST_PROXY: bool.default(false),
 });
 
-export type Config = Omit<z.infer<typeof schema>, 'APP_ENCRYPTION_KEY'> & {
+export type Config = Omit<z.infer<typeof schema>, 'APP_ENCRYPTION_KEY' | 'APP_BASE_URL'> & {
   APP_ENCRYPTION_KEY: string;
+  APP_BASE_URL: string;
   encryptionKey: Buffer;
   isProd: boolean;
   isTest: boolean;
@@ -55,5 +58,11 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     throw new Error('В production нужно задать собственный APP_ENCRYPTION_KEY (openssl rand -base64 32)');
   if (isProd && !c.METRICS_TOKEN) throw new Error('В production нужно задать METRICS_TOKEN');
   const encryptionKey = parseEncryptionKey(c.APP_ENCRYPTION_KEY);
-  return { ...c, encryptionKey, isProd, isTest: c.NODE_ENV === 'test' };
+  return {
+    ...c,
+    APP_BASE_URL: c.APP_BASE_URL ?? `http://localhost:${c.WEB_PORT}`,
+    encryptionKey,
+    isProd,
+    isTest: c.NODE_ENV === 'test',
+  };
 }

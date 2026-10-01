@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "node scripts/run-next.mjs dev",
     "build": "next build",
-    "start": "next start -p 3000",
+    "start": "node scripts/run-next.mjs start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
