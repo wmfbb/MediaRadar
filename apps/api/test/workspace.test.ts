@@ -94,7 +94,7 @@ describe('источники', () => {
     expect((await owner.patch(`/v1/sources/${shared.id}`, { enabled: true })).statusCode).toBe(200);
     const run = await owner.post(`/v1/sources/${shared.id}/run`);
     expect(run.statusCode).toBe(202);
-    expect(run.json()).toMatchObject({ implemented: false });
+    expect(run.json()).toMatchObject({ implemented: true });
     expect(
       (await owner.put(`/v1/sources/${shared.id}/config`, { config: { connector: 'rss' } })).statusCode,
     ).toBe(403);

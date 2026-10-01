@@ -305,3 +305,56 @@ describe('prefixQuery', () => {
     expect(prefixQuery("рост'); DROP TABLE x;--")).toBe('рос:* & dro:* & tabl:*');
   });
 });
+
+describe('материал, удалённый на источнике', () => {
+  it('остаётся в ленте с пометкой, временем обнаружения и ссылкой на картинку; возвращение снимает пометку, но не стирает факт удаления', async () => {
+    const found = (await owner.get('/v1/articles?limit=1')).json<Page>();
+    const id = found.items[0]!.id;
+    const removedAt = '2026-10-01T05:00:00.000Z';
+    await withAdmin((c) =>
+      c.query(
+        `UPDATE articles SET source_state = 'removed', removed_at = $2, image_url = 'https://img.test/a.jpg' WHERE id = $1`,
+        [id, removedAt],
+      ),
+    );
+    try {
+      const oneRes = await owner.get(`/v1/articles/${id}`);
+      const one = oneRes.json<{
+        sourceState: string;
+        removedAt: string;
+        restoredAt: string | null;
+        imageUrl: string;
+      }>();
+      expect(oneRes.statusCode).toBe(200);
+      expect(one).toMatchObject({
+        sourceState: 'removed',
+        removedAt,
+        imageUrl: 'https://img.test/a.jpg',
+        restoredAt: null,
+      });
+      const listRes = await owner.get('/v1/articles?limit=50');
+      const list = listRes.json<{ items: Array<{ id: string; sourceState: string }> }>();
+      expect(list.items.find((x) => x.id === id)).toMatchObject({ sourceState: 'removed' }); // запись не исчезает
+      await withAdmin((c) =>
+        c.query(`UPDATE articles SET source_state = 'available', restored_at = $2 WHERE id = $1`, [
+          id,
+          '2026-10-01T06:00:00.000Z',
+        ]),
+      );
+      const backRes = await owner.get(`/v1/articles/${id}`);
+      const back = backRes.json<{ sourceState: string; removedAt: string; restoredAt: string }>();
+      expect(back).toMatchObject({
+        sourceState: 'available',
+        removedAt,
+        restoredAt: '2026-10-01T06:00:00.000Z',
+      });
+    } finally {
+      await withAdmin((c) =>
+        c.query(
+          `UPDATE articles SET source_state = 'available', removed_at = NULL, restored_at = NULL, image_url = NULL WHERE id = $1`,
+          [id],
+        ),
+      );
+    }
+  });
+});

@@ -75,6 +75,7 @@ services:
       WORKER_DATABASE_URL: postgres://app_worker:${APP_WORKER_DB_PASSWORD}@postgres:5432/mediaradar
       # Фаза 0: синтетический поток для демонстрации. На боевых данных выключить.
       DEMO_LIVE: ${DEMO_LIVE:-false}
+      COLLECT_ENABLED: ${COLLECT_ENABLED:-true}
 
   web:
     build:

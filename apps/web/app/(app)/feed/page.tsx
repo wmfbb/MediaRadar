@@ -19,7 +19,7 @@ import {
   useToast,
 } from '@mediaradar/ui';
 import { SENTIMENTS } from '@mediaradar/core/domain';
-import { SentimentBadge, Thumb } from '@/components/charts-common';
+import { Cover, SentimentBadge } from '@/components/charts-common';
 import { ErrorBox, PageHeader } from '@/components/page';
 import { api, errorMessage } from '@/lib/api';
 import { dateTime, num, sentimentScore, timeAgo } from '@/lib/format';
@@ -93,13 +93,29 @@ function apiParams(f: Filters, withSort: boolean): URLSearchParams {
 }
 const safeHref = (u: string) => (/^https?:\/\//i.test(u) ? u : '#');
 
+function RemovedBadge({ at }: { at: string | null }) {
+  return (
+    <Badge
+      tone="bad"
+      title={`Материал удалён на сайте источника${at ? `, обнаружено ${dateTime(at)}` : ''}. У нас сохранены заголовок, лид и ссылка.`}
+    >
+      удалено на источнике
+    </Badge>
+  );
+}
+
 function FeedCardView({ a, onOpen }: { a: ArticleCard; onOpen: () => void }) {
   const s = a.sentiment;
   const fresh = Date.now() - new Date(a.publishedAt).getTime() < 3600_000;
   return (
     <article className="group overflow-hidden rounded-card border border-line bg-surface shadow-card transition hover:-translate-y-0.5 hover:shadow-pop">
       <div className="relative">
-        <Thumb color={a.topic?.color ?? '#64748b'} label={a.topic?.name ?? 'Материал'} />
+        <Cover
+          key={a.imageUrl ?? a.id}
+          src={a.imageUrl}
+          color={a.topic?.color ?? '#64748b'}
+          label={a.topic?.name ?? 'Материал'}
+        />
         {s && <SentimentBadge label={s.label} className="absolute right-2.5 top-2.5 !bg-surface/95 shadow" />}
       </div>
       <div className="p-4">
@@ -110,6 +126,7 @@ function FeedCardView({ a, onOpen }: { a: ArticleCard; onOpen: () => void }) {
               new
             </Badge>
           )}
+          {a.sourceState === 'removed' && <RemovedBadge at={a.removedAt} />}
           <span className="max-w-[150px] truncate font-bold text-accent">{a.source.domain}</span>
           <span aria-hidden>·</span>
           <span className="font-mono">{timeAgo(a.publishedAt)}</span>
@@ -218,8 +235,24 @@ function ArticleModal({
       {data && (
         <div>
           <div className="mb-4 overflow-hidden rounded-xl">
-            <Thumb color={data.topic?.color ?? '#64748b'} label={data.topic?.name ?? 'Материал'} />
+            <Cover
+              key={data.imageUrl ?? data.id}
+              src={data.imageUrl}
+              color={data.topic?.color ?? '#64748b'}
+              label={data.topic?.name ?? 'Материал'}
+              className="h-[180px]"
+            />
           </div>
+          {data.sourceState === 'removed' && (
+            <p
+              className="mb-4 rounded-lg border border-bad/30 bg-bad-soft px-3 py-2 text-[12.5px] text-bad"
+              role="status"
+            >
+              Этот материал удалён на сайте источника
+              {data.removedAt ? ` (обнаружено ${dateTime(data.removedAt)})` : ''}. У нас сохранены заголовок,
+              лид и ссылка.
+            </p>
+          )}
           <div className="mb-4 flex flex-wrap items-center gap-2 text-[12px]">
             {s && (
               <Badge

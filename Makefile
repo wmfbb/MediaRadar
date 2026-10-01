@@ -12,7 +12,7 @@ export
 
 COMPOSE := docker compose -f deploy/docker-compose.dev.yml
 
-.PHONY: help setup deps-up deps-down deps-reset db-migrate db-seed db-reset dev build lint typecheck format format-check test e2e e2e-install check clean
+.PHONY: help setup deps-up deps-down deps-reset db-migrate db-seed db-reset db-demo dev build lint typecheck format format-check test e2e e2e-install check clean
 
 help: ## Показать список команд
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -32,13 +32,16 @@ deps-reset: ## Остановить и УДАЛИТЬ данные PostgreSQL и
 db-migrate: ## Применить миграции БД
 	pnpm db:migrate
 
-db-seed: ## Загрузить демо-данные, если БД пустая
-	pnpm db:seed --if-empty
+db-seed: ## Загрузить аккаунты и реестр реальных источников, если БД пустая
+	pnpm db:seed --if-empty --real
 
-db-reset: ## Пересоздать демо-данные (удаляет текущие тенанты!)
+db-reset: ## Начать с чистого листа: аккаунты и реальные источники, без материалов (удаляет всё собранное!)
+	pnpm db:seed --reset --real
+
+db-demo: ## Заменить данные синтетическими (для демонстрации без интернета и для e2e-тестов; удаляет собранное!)
 	pnpm db:seed --reset
 
-dev: setup deps-up db-migrate db-seed ## Всё сразу: зависимости, БД, демо-данные, API + воркер + портал
+dev: setup deps-up db-migrate db-seed ## Всё сразу: зависимости, БД, реальные источники, API + воркер (сбор идёт сам) + портал
 	@echo ""
 	@echo "Портал: http://localhost:3000   (вход: a.prokhorov@altai.media / Demo-Passw0rd!)"
 	@echo "API:    http://localhost:4000/docs"
@@ -66,7 +69,7 @@ test: deps-up ## Юнит- и интеграционные тесты (нужн�
 e2e-install: ## Один раз: скачать браузер для e2e-тестов
 	pnpm --filter @mediaradar/web exec playwright install chromium
 
-e2e: ## E2E-тесты в браузере (портал должен быть запущен: make dev)
+e2e: ## E2E-тесты в браузере (нужны синтетические данные: make db-demo, затем make dev)
 	pnpm --filter @mediaradar/web exec playwright test
 
 check: format-check lint typecheck test build ## То же, что проверяет CI

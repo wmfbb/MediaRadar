@@ -83,7 +83,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: cp .env.example .env
+      - run: |
+          cp .env.example .env
+          # e2e идут на синтетических данных: без обращений к внешним сайтам, с демо-потоком
+          printf 'DEMO_LIVE=true\nCOLLECT_ENABLED=false\n' >> .env
       - name: Миграции и демо-данные
         run: |
           set -a; source .env; set +a

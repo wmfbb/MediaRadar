@@ -5,10 +5,11 @@ export interface LiveArticle {
   id: string;
   title: string;
   publishedAt: string;
-  topic: string;
+  topic: string | null;
   geo: string | null;
   source: { id: string; name: string; domain: string; kind: string };
-  sentiment: { label: 'VP' | 'P' | 'N' | 'NG' | 'VN'; score: number };
+  /** null — материал собран, но ещё не оценён (анализ тональности подключается в Фазе 3). */
+  sentiment: { label: 'VP' | 'P' | 'N' | 'NG' | 'VN'; score: number } | null;
 }
 type Status = 'connecting' | 'live' | 'offline';
 interface LiveValue {

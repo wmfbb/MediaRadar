@@ -147,11 +147,16 @@ export interface ArticleRow {
   topic_name: string | null;
   topic_color: string | null;
   geo_name: string | null;
+  image_url: string | null;
+  source_state: 'available' | 'removed';
+  removed_at: Date | null;
+  restored_at: Date | null;
 }
 
 export const ARTICLE_COLUMNS = `a.id, a.title, a.lead, a.url, a.published_at, a.sentiment_label, a.sentiment_score, a.views, a.source_id,
   s.name AS source_name, s.domain AS source_domain, s.kind AS source_kind, s.trust_score AS source_trust, s.content_policy AS source_policy,
-  t.key AS topic_key, t.name AS topic_name, t.color AS topic_color, g.name AS geo_name`;
+  t.key AS topic_key, t.name AS topic_name, t.color AS topic_color, g.name AS geo_name,
+  a.image_url, a.source_state, a.removed_at, a.restored_at`;
 
 export function articleDto(
   row: ArticleRow,
@@ -168,7 +173,13 @@ export function articleDto(
     title: row.title,
     lead: policy === 'metadata' ? null : truncate(row.lead, pr.excerptMax),
     url: row.url,
+    // картинка не копируется, а подтягивается по ссылке источника; если её удалили — клиент показывает свою заглушку
+    imageUrl: row.image_url,
     publishedAt: row.published_at,
+    // «удалено на источнике»: запись остаётся, фиксируется время обнаружения (removedAt сохраняется и после возвращения материала)
+    sourceState: row.source_state,
+    removedAt: row.removed_at,
+    restoredAt: row.restored_at,
     sentiment: row.sentiment_label ? { label: row.sentiment_label, score: row.sentiment_score } : null,
     views: row.views,
     source: {

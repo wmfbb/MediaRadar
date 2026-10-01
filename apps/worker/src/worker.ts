@@ -10,6 +10,8 @@ export interface WorkerOptions {
   databaseUrl: string;
   demoLive: boolean;
   demoIntervalSec: number;
+  /** Периодический сбор источников и проверка удалений (COLLECT_ENABLED). Ручной запуск работает всегда. */
+  collect?: boolean;
   healthPort: number | null;
   logger: Logger;
 }
@@ -30,8 +32,26 @@ export async function startWorker(opts: WorkerOptions): Promise<RunningWorker> {
     publish: (channel: string, payload: unknown) => pub.publish(channel, JSON.stringify(payload)),
   };
 
+  const collectQueue = new Queue(QUEUES.collect, { connection });
+  collectQueue.on('error', () => {});
   const workers = [
-    new Worker(QUEUES.collect, (job) => handleCollect(job.data, log), { connection, concurrency: 2 }),
+    new Worker(
+      QUEUES.collect,
+      (job) =>
+        handleCollect(job.name, job.data, {
+          run: (fn) => db.raw(fn),
+          bus,
+          log,
+          enqueueSource: async (sourceId) => {
+            await collectQueue.add(
+              'source',
+              { sourceId },
+              { jobId: `source-${sourceId}`, removeOnComplete: true, removeOnFail: 100 },
+            );
+          },
+        }),
+      { connection, concurrency: 3 },
+    ),
     new Worker(QUEUES.demoLive, () => handleDemoLive((fn) => db.raw(fn), bus, log), {
       connection,
       concurrency: 1,
@@ -42,6 +62,23 @@ export async function startWorker(opts: WorkerOptions): Promise<RunningWorker> {
       log.error({ queue: w.name, jobId: job?.id, err: err.message }, 'задание завершилось ошибкой'),
     );
     w.on('error', (err) => log.error({ queue: w.name, err: err.message }, 'ошибка воркера'));
+  }
+
+  if (opts.collect) {
+    await collectQueue.upsertJobScheduler(
+      'collect-tick',
+      { every: 60_000 },
+      { name: 'tick', opts: { removeOnComplete: 5, removeOnFail: 20 } },
+    );
+    await collectQueue.upsertJobScheduler(
+      'verify-tick',
+      { every: 10 * 60_000 },
+      { name: 'verify-tick', opts: { removeOnComplete: 5, removeOnFail: 20 } },
+    );
+    log.info({}, 'collect: периодический сбор и проверка удалений включены');
+  } else {
+    await collectQueue.removeJobScheduler('collect-tick').catch(() => {});
+    await collectQueue.removeJobScheduler('verify-tick').catch(() => {});
   }
 
   const demoQueue = new Queue(QUEUES.demoLive, { connection });
@@ -74,6 +111,7 @@ export async function startWorker(opts: WorkerOptions): Promise<RunningWorker> {
       server?.close();
       await Promise.all(workers.map((w) => w.close()));
       await demoQueue.close();
+      await collectQueue.close();
       pub.disconnect();
       await db.close();
     },
@@ -91,6 +129,7 @@ export function configFromEnv(logger: Logger): WorkerOptions {
     databaseUrl: config.DATABASE_URL,
     demoLive: config.DEMO_LIVE,
     demoIntervalSec: Number(process.env.DEMO_LIVE_INTERVAL_SEC ?? 8),
+    collect: ['1', 'true', 'yes', 'on'].includes((process.env.COLLECT_ENABLED ?? '').toLowerCase()),
     healthPort: process.env.WORKER_HEALTH_PORT ? Number(process.env.WORKER_HEALTH_PORT) : null,
     logger,
   };

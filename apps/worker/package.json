@@ -16,6 +16,8 @@
     "@mediaradar/db": "workspace:*",
     "@node-rs/argon2": "^2.2.1",
     "bullmq": "^6.3.11",
+    "cheerio": "^1.2.0",
+    "fast-xml-parser": "^5.11.2",
     "ioredis": "^5.8.2",
     "pg": "^8.23.1",
     "pino": "^10.3.1",

@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, resetDemo, seedDemo } from '../seed';
+import { REAL_SOURCES, seedRealSources } from '../seed/real-sources';
 
 const args = new Set(process.argv.slice(2));
 if (process.env.NODE_ENV === 'production' && !args.has('--force')) {
@@ -14,6 +15,11 @@ if (!url) {
 const client = new pg.Client({ connectionString: url });
 await client.connect();
 try {
+  if (args.has('--sources-only')) {
+    const r = await seedRealSources(client);
+    console.log(`Реестр реальных источников: добавлено ${r.added} из ${r.total}.`);
+    process.exit(0);
+  }
   const existing = await client.query('SELECT count(*)::int AS n FROM tenants');
   if (existing.rows[0].n > 0) {
     if (args.has('--if-empty')) {
@@ -26,7 +32,17 @@ try {
     }
     await resetDemo(client);
   }
-  const s = await seedDemo(client);
+  // --real: аккаунты и тенанты как в демо, но без синтетических материалов и источников-плейсхолдеров; вместо них — реальные источники
+  const real = args.has('--real');
+  const s = await seedDemo(client, real ? { articles: 0 } : {});
+  if (real) {
+    await client.query("DELETE FROM sources WHERE meta->>'demo' = 'true'");
+    const r = await seedRealSources(client);
+    console.log(
+      `Реальные источники: ${r.total} (сбор начнётся при запущенном воркере с COLLECT_ENABLED=true).`,
+    );
+    s.sources = REAL_SOURCES.length;
+  }
   console.log(
     `Готово: тенантов ${Object.keys(s.tenants).length}, источников ${s.sources}, материалов ${s.articles}`,
   );

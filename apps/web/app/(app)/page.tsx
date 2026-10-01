@@ -76,6 +76,7 @@ const SPARK_COLORS: Record<string, string> = {
 };
 
 function Kpis({ data }: { data: Dash }) {
+  const analyzed = data.sentiment.total > 0;
   return (
     <div className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
       {data.kpis.map((k) => (
@@ -87,9 +88,13 @@ function Kpis({ data }: { data: Dash }) {
             <Delta value={k.delta} goodWhenUp={k.goodWhenUp} />
           </div>
           <div className="font-mono text-[26px] font-extrabold leading-none tracking-tight">
-            {num(k.value)}
+            {k.key === 'negative' && !analyzed ? '—' : num(k.value)}
           </div>
-          {k.hint && <div className="mt-1 text-[11px] text-faint">{k.hint}</div>}
+          {k.key === 'negative' && !analyzed ? (
+            <div className="mt-1 text-[11px] text-faint">тональность подключается в Фазе 3</div>
+          ) : (
+            k.hint && <div className="mt-1 text-[11px] text-faint">{k.hint}</div>
+          )}
           {k.spark ? (
             <div className="mt-2">
               <Sparkline
@@ -119,8 +124,8 @@ function LiveTicker() {
       source: a.source.name,
       geo: a.geo,
       publishedAt: a.publishedAt,
-      label: a.sentiment.label,
-      topic: a.topic,
+      label: a.sentiment?.label ?? null,
+      topic: a.topic ?? '',
       isLive: true,
     }));
     const base = (data?.items ?? [])
@@ -131,7 +136,7 @@ function LiveTicker() {
         source: i.source.name,
         geo: i.geo,
         publishedAt: i.publishedAt,
-        label: i.sentiment?.label ?? 'N',
+        label: i.sentiment?.label ?? null,
         topic: i.topic?.key ?? '',
         isLive: false,
       }));
@@ -160,7 +165,7 @@ function LiveTicker() {
           <li
             key={r.id}
             className={cn('border-l-2 px-5 py-3 transition hover:bg-surface-2', r.isLive && 'mr-slide-in')}
-            style={{ borderColor: SENTIMENTS[r.label].hex }}
+            style={{ borderColor: r.label ? SENTIMENTS[r.label].hex : '#94a3b8' }}
           >
             <Link href={`/feed?q=${encodeURIComponent(r.title)}`} className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
@@ -177,7 +182,13 @@ function LiveTicker() {
                   <span className="font-mono">{timeAgo(r.publishedAt)}</span>
                 </div>
               </div>
-              <SentimentBadge label={r.label} className="mt-0.5 flex-none" />
+              {r.label ? (
+                <SentimentBadge label={r.label} className="mt-0.5 flex-none" />
+              ) : (
+                <Badge className="mt-0.5 flex-none" title="Анализ тональности подключается в Фазе 3">
+                  не оценено
+                </Badge>
+              )}
             </Link>
           </li>
         ))}
@@ -221,7 +232,15 @@ function SentimentCard({ data }: { data: Dash }) {
         <Badge>{num(data.sentiment.total)} матер.</Badge>
       </div>
       <p className="mb-3 text-[12px] text-muted">Распределение за выбранный период</p>
-      <Chart option={option} height={176} label="Круговая диаграмма тональности материалов" />
+      {data.sentiment.total > 0 ? (
+        <Chart option={option} height={176} label="Круговая диаграмма тональности материалов" />
+      ) : (
+        <div className="grid h-[176px] place-items-center text-center text-[12.5px] text-muted">
+          Материалы собраны, но ещё не оценены.
+          <br />
+          Анализ тональности подключается в Фазе 3.
+        </div>
+      )}
       <ul className="mt-4 space-y-2 border-t border-line pt-4">
         {data.sentiment.items.map((i) => (
           <li key={i.key} className="flex items-center gap-2 text-[12px]">

@@ -1,7 +1,7 @@
 'use client';
 import { SENTIMENTS, type SentimentLabel } from '@mediaradar/core/domain';
 import { Badge, cn } from '@mediaradar/ui';
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { pctDelta } from '@/lib/format';
 
 export const SENT_TONE: Record<SentimentLabel, 'ok' | 'ok' | 'neutral' | 'warn' | 'bad'> = {
@@ -40,6 +40,33 @@ export const heatStyle = (value: number, max: number) => {
 };
 
 /** Миниатюра материала: градиент цвета темы с узором (в прототипе — тот же приём, реальные изображения появятся в Фазе 1). */
+/** Обложка материала: картинка по ссылке источника; если её нет или она удалена — наша заглушка. */
+export function Cover({
+  src,
+  color,
+  label,
+  className,
+}: {
+  src: string | null;
+  color: string;
+  label: string;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return <Thumb color={color} label={label} className={className} />;
+  return (
+    // внешние адреса источников: оптимизатор изображений Next.js не нужен
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+      className={cn('block h-[120px] w-full object-cover', className)}
+    />
+  );
+}
+
 export function Thumb({ color, label, className }: { color: string; label: string; className?: string }) {
   const id = useId().replace(/:/g, '');
   return (

@@ -1,12 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { AppError, PARSERS, SOURCE_KINDS, type SourceKind } from '@mediaradar/core';
+import { AppError, PARSERS, assertPublicHttpUrl, SOURCE_KINDS, type SourceKind } from '@mediaradar/core';
 import type { Queryable } from '@mediaradar/db';
 import { audit } from '../lib/audit';
 import { assertFeature, assertWithinLimit, loadEntitlements } from '../lib/entitlements';
 import { camel, uuidParam } from '../lib/http';
-import { assertPublicHttpUrl } from '../lib/url-safety';
 import { requireAuth, tctx, type Access } from '../plugins/auth';
 
 const CRON_RE = /^(\S+\s+){4}\S+$/;
@@ -260,11 +259,12 @@ export async function sourcesRoutes(app: FastifyInstance, access: Access): Promi
         tenantId: a.tenantId,
         requestedBy: a.userId,
       });
-      // Обработчик сбора появится в Фазе 1: сейчас задание принимается очередью, но данные не собирает.
       return reply.status(202).send({
         queued,
-        implemented: false,
-        note: 'Сбор данных реализуется в Фазе 1. Задание поставлено в очередь.',
+        implemented: true,
+        note: queued
+          ? 'Задание поставлено в очередь: воркер соберёт источник в ближайшие секунды.'
+          : 'Очередь недоступна (Redis не подключён) — запуск не выполнен.',
       });
     },
   );

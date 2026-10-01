@@ -5,3 +5,4 @@ export * from './password';
 export * from './errors';
 export * from './config';
 export * from './domain';
+export * from './url-safety';

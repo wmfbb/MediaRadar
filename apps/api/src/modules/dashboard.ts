@@ -7,8 +7,10 @@ import { ARTICLE_FROM, buildArticleWhere, tenantTz } from '../lib/content';
 import { camelAll, rangeBounds, rangeSchema } from '../lib/http';
 import { requireAuth, tctx, type Access, type AuthContext } from '../plugins/auth';
 
+/** Изменение к прошлому периоду. Если в прошлом периоде мало данных (сбор только начался), сравнение не показываем. */
+const MIN_PREV_FOR_DELTA = 30;
 const pct = (cur: number, prev: number): number | null =>
-  prev === 0 ? null : Math.round(((cur - prev) / prev) * 1000) / 10;
+  prev < MIN_PREV_FOR_DELTA ? null : Math.round(((cur - prev) / prev) * 1000) / 10;
 const STOPWORDS = new Set(
   'который которая которое которые также после перед между более менее этого этой этих этот эта или как для при над под про его ещё еще был была были будет будут может могут чтобы если когда только очень всех всем свои своих свой края краю краем регион региона регионе регионы'.split(
     ' ',

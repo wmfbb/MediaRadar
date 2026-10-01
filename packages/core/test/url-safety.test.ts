@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertPublicHttpUrl, isPrivateAddress } from '../src/lib/url-safety';
-import { slugify } from '../src/lib/slug';
+import { assertPublicHttpUrl, isPrivateAddress } from '../src/url-safety';
 
 describe('защита от SSRF при добавлении источника', () => {
   it.each([
@@ -60,15 +59,5 @@ describe('защита от SSRF при добавлении источника'
     expect(isPrivateAddress('::ffff:8.8.8.8')).toBe(false);
     expect(isPrivateAddress('::ffff:0a00:0001')).toBe(true);
     expect(isPrivateAddress('garbage::::')).toBe(false); // не IP-адрес — проверяется как имя хоста
-  });
-});
-
-describe('slugify', () => {
-  it('транслитерирует и чистит', () => {
-    expect(slugify('Алтайский край')).toBe('altayskiy-kray');
-    expect(slugify('  Мой  Регион!! 2027 ')).toBe('moy-region-2027');
-    expect(slugify('Я')).toMatch(/^ws-/);
-    expect(slugify('A'.repeat(100)).length).toBeLessThanOrEqual(40);
-    expect(slugify('Тест')).toMatch(/^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/);
   });
 });

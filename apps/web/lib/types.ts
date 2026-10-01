@@ -31,6 +31,12 @@ export interface ArticleCard {
   persons: string[];
   orgs: string[];
   policy: 'full' | 'excerpt' | 'metadata';
+  /** Ссылка на картинку источника (подтягивается при показе; при ошибке — заглушка). */
+  imageUrl: string | null;
+  /** «Удалено на источнике»: запись у нас остаётся, removedAt — когда обнаружили (сохраняется и после возвращения материала). */
+  sourceState: 'available' | 'removed';
+  removedAt: string | null;
+  restoredAt: string | null;
 }
 export interface ArticleDetail extends ArticleCard {
   body: string | null;

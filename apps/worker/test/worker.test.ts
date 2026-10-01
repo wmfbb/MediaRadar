@@ -2,7 +2,7 @@ import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { QUEUES, handleCollect, handleDemoLive } from '../src/jobs';
+import { QUEUES, handleDemoLive } from '../src/jobs';
 import { startWorker, type RunningWorker } from '../src/worker';
 import { TEST_DB } from './global-setup';
 
@@ -41,13 +41,9 @@ const articleCount = async () => {
 };
 
 describe('воркер', () => {
-  it('collect: честная заглушка — задание принимается, данные не собираются', async () => {
-    expect(await handleCollect({ sourceId: 's' }, log)).toEqual({ implemented: false });
-  });
-
-  it('задание из очереди collect выполняется реальным воркером BullMQ через Redis', async () => {
+  it('задание из очереди collect выполняется реальным воркером BullMQ через Redis (источник не найден — не падает)', async () => {
     const q = new Queue(QUEUES.collect, { connection: { url: REDIS_URL } });
-    const job = await q.add('run-source', { sourceId: 'x' });
+    const job = await q.add('run-source', { sourceId: '00000000-0000-0000-0000-000000000000' });
     const deadline = Date.now() + 8000;
     let state = await job.getState();
     while (state !== 'completed' && Date.now() < deadline) {
@@ -55,9 +51,8 @@ describe('воркер', () => {
       state = await job.getState();
     }
     expect(state).toBe('completed');
-    expect((await job.getState()) === 'completed' && (await q.getJob(job.id!))?.returnvalue).toEqual({
-      implemented: false,
-    });
+    // источника с таким id нет — воркер отвечает «не найден», не падая
+    expect((await q.getJob(job.id!))?.returnvalue).toMatchObject({ skipped: 'not_found' });
     await q.close();
   });
 

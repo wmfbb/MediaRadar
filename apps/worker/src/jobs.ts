@@ -1,5 +1,9 @@
 import type { Queryable } from '@mediaradar/db';
 import { createLiveDemoArticle } from '@mediaradar/db';
+import { collectSource, type Run } from './collector/collect';
+import type { Fetcher } from './collector/http';
+import { selectDueSources } from './collector/schedule';
+import { verifyArticles } from './collector/verify';
 
 export const QUEUES = { collect: 'collect', demoLive: 'demo-live' } as const;
 
@@ -12,19 +16,34 @@ export interface Logger {
   error(obj: object, msg?: string): void;
 }
 
+export interface CollectContext {
+  run: Run;
+  bus: Publisher;
+  log: Logger;
+  /** Очередь для постановки заданий по источникам, которым пора на опрос. */
+  enqueueSource: (sourceId: string) => Promise<void>;
+  fetch?: Fetcher;
+  now?: () => Date;
+  sleep?: (ms: number) => Promise<void>;
+}
+
 /**
- * Сбор данных из источника — Фаза 1. Сейчас задание принимается и завершается без обращения к сайтам:
- * очередь, повторные попытки и мониторинг уже работают, обработчик подключится в Фазе 1.
+ * Очередь `collect` обслуживает три вида заданий:
+ *  - `tick` (каждую минуту): выбрать источники, которым пора на опрос, и поставить по заданию на каждый;
+ *  - `run-source` / `source`: собрать один источник (по расписанию или по кнопке «Парсить»);
+ *  - `verify-tick` (каждые 10 минут): проверить, не удалены ли недавние материалы на источнике.
  */
-export async function handleCollect(
-  data: { sourceId?: string; tenantId?: string },
-  log: Logger,
-): Promise<{ implemented: false }> {
-  log.info(
-    { ...data },
-    'collect: обработчик сбора появится в Фазе 1 (задание принято и завершено без сбора)',
-  );
-  return { implemented: false };
+export async function handleCollect(name: string, data: { sourceId?: string }, ctx: CollectContext) {
+  const now = (ctx.now ?? (() => new Date()))();
+  if (name === 'tick') {
+    const ids = await ctx.run((q) => selectDueSources(q, now));
+    for (const id of ids) await ctx.enqueueSource(id);
+    return { due: ids.length };
+  }
+  if (name === 'verify-tick')
+    return verifyArticles({ run: ctx.run, log: ctx.log, fetch: ctx.fetch, now: ctx.now, sleep: ctx.sleep });
+  if (!data.sourceId) return { skipped: 'no_source' as const };
+  return collectSource(ctx, data.sourceId);
 }
 
 /** Демо-поток: новый синтетический материал → рассылка событий подписанным тенантам (канал tenant:{id}:feed). */

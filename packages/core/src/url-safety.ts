@@ -1,5 +1,5 @@
 import { isIP } from 'node:net';
-import { AppError } from '@mediaradar/core';
+import { AppError } from './errors';
 
 const BLOCKED_HOSTS = new Set([
   'localhost',

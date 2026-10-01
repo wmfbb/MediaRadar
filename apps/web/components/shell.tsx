@@ -693,7 +693,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <Topbar onMenu={() => setMenu(true)} />
         {demo && (
           <div className="border-b border-warn/30 bg-warn-soft px-4 py-1.5 text-center text-[12px] font-medium text-warn">
-            Демо-режим: источники и материалы синтетические, реальный сбор данных подключается в Фазе 1
+            Демо-режим: показаны синтетические данные
           </div>
         )}
         <main id="main" className="min-w-0 flex-1 p-4 lg:p-6">
