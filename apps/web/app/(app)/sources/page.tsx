@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { SOURCE_KINDS, PARSERS } from '@mediaradar/core/domain';
@@ -448,7 +449,12 @@ export default function Page() {
                           </span>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
-                              <span className="max-w-[230px] truncate font-semibold">{s.name}</span>
+                              <Link
+                                href={`/sources/${s.id}`}
+                                className="max-w-[230px] truncate font-semibold hover:text-accent hover:underline"
+                              >
+                                {s.name}
+                              </Link>
                               {s.isPrivate && (
                                 <Badge tone="accent" title="Приватный источник тенанта">
                                   приватный

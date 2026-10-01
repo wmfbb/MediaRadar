@@ -2,11 +2,11 @@ import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { SENTIMENT_KEYS, SENTIMENTS, type SentimentLabel } from '@mediaradar/core';
-import type { Queryable } from '@mediaradar/db';
 import { ARTICLE_FROM, buildArticleWhere, tenantTz } from '../lib/content';
 import { camelAll, rangeBounds, rangeSchema } from '../lib/http';
 import { detectSpikes } from '../lib/spikes';
-import { requireAuth, tctx, type Access, type AuthContext } from '../plugins/auth';
+import { periodQuery, topWords } from '../lib/stats';
+import { requireAuth, tctx, type Access } from '../plugins/auth';
 
 /** Изменение к прошлому периоду. Если в прошлом периоде мало данных (сбор только начался), сравнение не показываем. */
 const MIN_PREV_FOR_DELTA = 30;
@@ -14,37 +14,6 @@ const pct = (cur: number, prev: number): number | null =>
   prev < MIN_PREV_FOR_DELTA ? null : Math.round(((cur - prev) / prev) * 1000) / 10;
 /** Цвета рядов, когда график строится по источникам (тем у материалов ещё нет). */
 const SERIES_COLORS = ['#3363ff', '#059669', '#f59e0b', '#8b5cf6', '#e11d48', '#94a3b8'];
-/** Основы слов, которые не говорят о теме: названия месяцев, регион и страна (они есть почти в каждом заголовке). */
-const STOPSTEMS = new Set(
-  'январ февра марта апрел мая июня июля авгус сентя октяб ноябр декаб алтай росси крае'.split(' '),
-);
-const STOPWORDS = new Set(
-  'который которая которое которые также после перед между более менее этого этой этих этот эта или как для при над под про его ещё еще был была были будет будут может могут чтобы если когда только очень всех всем свои своих свой края краю краем регион региона регионе регионы'.split(
-    ' ',
-  ),
-);
-
-async function periodQuery<T extends Record<string, unknown>>(
-  q: Queryable,
-  a: AuthContext,
-  from: Date,
-  to: Date,
-  select: string,
-  tail: string,
-  extra: unknown[] = [],
-): Promise<T[]> {
-  const w = buildArticleWhere({ from, to }, a);
-  // extra-параметры нумеруются после параметров фильтра: и в select, и в tail их нужно адресовать как {n}
-  const bind = (sql: string) =>
-    sql.replace(/\{(\d+)\}/g, (_, i: string) => `$${w.params.length + Number(i)}`);
-  return (
-    await q.query<T>(`SELECT ${bind(select)} ${ARTICLE_FROM} WHERE ${w.sql} ${bind(tail)}`, [
-      ...w.params,
-      ...extra,
-    ])
-  ).rows;
-}
-
 export async function dashboardRoutes(app: FastifyInstance, access: Access): Promise<void> {
   const r = app.withTypeProvider<ZodTypeProvider>();
   const { db, queues } = app.deps;
@@ -206,9 +175,9 @@ export async function dashboardRoutes(app: FastifyInstance, access: Access): Pro
           );
           const pw = buildArticleWhere({ from, to }, a);
           const persons = (
-            await q.query<{ name: string; count: number }>(
-              `SELECT e.canonical_name AS name, count(DISTINCT a.id)::int AS count ${ARTICLE_FROM} JOIN article_entities ae ON ae.article_id = a.id JOIN entities e ON e.id = ae.entity_id AND e.type = 'person'
-          WHERE ${pw.sql} GROUP BY e.canonical_name ORDER BY count DESC, name LIMIT 7`,
+            await q.query<{ id: string; name: string; count: number }>(
+              `SELECT e.id, e.canonical_name AS name, count(DISTINCT a.id)::int AS count ${ARTICLE_FROM} JOIN article_entities ae ON ae.article_id = a.id JOIN entities e ON e.id = ae.entity_id AND e.type = 'person'
+          WHERE ${pw.sql} GROUP BY e.id, e.canonical_name ORDER BY count DESC, name LIMIT 7`,
               pw.params,
             )
           ).rows;
@@ -475,21 +444,7 @@ export async function dashboardRoutes(app: FastifyInstance, access: Access): Pro
             'a.title',
             'ORDER BY a.published_at DESC LIMIT 4000',
           );
-          const groups = new Map<string, Map<string, number>>();
-          for (const { title } of titles)
-            for (const w of title.toLowerCase().match(/[а-яёa-z]{4,}/g) ?? []) {
-              const stem = w.slice(0, 5);
-              if (STOPWORDS.has(w) || STOPSTEMS.has(stem)) continue;
-              const g = groups.get(stem) ?? groups.set(stem, new Map()).get(stem)!;
-              g.set(w, (g.get(w) ?? 0) + 1);
-            }
-          const words = [...groups.values()]
-            .map((g) => ({
-              word: [...g].sort((x, y) => y[1] - x[1])[0]![0],
-              count: [...g.values()].reduce((s, x) => s + x, 0),
-            }))
-            .sort((x, y) => y.count - x.count)
-            .slice(0, 24);
+          const words = topWords(titles.map((t) => t.title));
 
           // автоматические наблюдения (правила, не LLM): числа считает код
           const topicNow = await periodQuery<{ key: string; name: string; n: number; neg: number }>(

@@ -19,6 +19,7 @@ import { tenantRoutes } from './modules/tenant';
 import { settingsRoutes } from './modules/settings';
 import { feedRoutes } from './modules/feed';
 import { dashboardRoutes } from './modules/dashboard';
+import { profileRoutes } from './modules/profiles';
 import { sourcesRoutes } from './modules/sources';
 import { workspaceRoutes } from './modules/workspace';
 import { adminRoutes } from './modules/admin';
@@ -118,6 +119,7 @@ export async function buildApp(deps: AppDeps, opts: AppOptions = {}): Promise<Fa
     ['settings', settingsRoutes],
     ['feed', feedRoutes],
     ['dashboard', dashboardRoutes],
+    ['profiles', profileRoutes],
     ['sources', sourcesRoutes],
     ['workspace', workspaceRoutes],
     ['admin', adminRoutes],

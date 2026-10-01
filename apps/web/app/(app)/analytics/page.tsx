@@ -4,6 +4,7 @@ import useSWR from 'swr';
 import { Card, Chart, Segmented, Skeleton, axisStyle, useChartTheme } from '@mediaradar/ui';
 import { heatStyle } from '@/components/charts-common';
 import { ErrorBox, PageHeader } from '@/components/page';
+import { DailyChart, HoursChart, WordCloud } from '@/components/profile';
 import { num } from '@/lib/format';
 import { useUrlParam } from '@/lib/hooks';
 
@@ -51,53 +52,6 @@ function Analytics() {
   });
   const t = useChartTheme();
 
-  const dayLabel = (d: string) =>
-    new Date(`${d}T12:00:00Z`).toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'short',
-      timeZone: 'UTC',
-    });
-  const dailyOption = useMemo(
-    () =>
-      data && {
-        grid: { left: 40, right: 12, top: 12, bottom: 28 },
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: { type: 'shadow' },
-          formatter: (p: Array<{ dataIndex: number }>) => {
-            const d = data.dailyVolume[p[0]!.dataIndex]!;
-            const note = d.spike
-              ? '<br/><b style="color:#e11d48">всплеск</b>'
-              : d.complete
-                ? ''
-                : '<br/><span style="opacity:.7">данные неполные</span>';
-            return `${dayLabel(d.date)}<br/><b>${num(d.count)}</b> материалов${note}`;
-          },
-        },
-        xAxis: {
-          type: 'category',
-          data: data.dailyVolume.map((d) => dayLabel(d.date)),
-          ...axisStyle(t),
-          splitLine: { show: false },
-        },
-        yAxis: { type: 'value', ...axisStyle(t) },
-        series: [
-          {
-            type: 'bar',
-            barWidth: '72%',
-            data: data.dailyVolume.map((d) => ({
-              value: d.count,
-              itemStyle: {
-                color: d.spike ? '#e11d48' : '#3363ff',
-                opacity: d.complete ? 1 : 0.35,
-                borderRadius: [3, 3, 0, 0],
-              },
-            })),
-          },
-        ],
-      },
-    [data, t],
-  );
   const hasIncomplete = !!data?.dailyVolume.some((d) => !d.complete && d.count > 0);
   const hasTone = !!data?.sourceComparison.some((s) => s.negativeShare !== null);
   const hasHeat = !!data?.heatmap.cells.length;
@@ -226,40 +180,9 @@ function Analytics() {
     [data, t, hasTone],
   );
 
-  const hoursOption = useMemo(() => {
-    if (!data) return null;
-    const max = Math.max(...data.hours, 1);
-    return {
-      grid: { left: 36, right: 8, top: 8, bottom: 24 },
-      tooltip: {
-        trigger: 'axis',
-        formatter: (p: Array<{ name: string; value: number }>) =>
-          `${p[0]!.name}:00 — ${num(p[0]!.value)} публикаций`,
-      },
-      xAxis: {
-        type: 'category',
-        data: data.hours.map((_, h) => h),
-        ...axisStyle(t),
-        splitLine: { show: false },
-      },
-      yAxis: { type: 'value', ...axisStyle(t) },
-      series: [
-        {
-          type: 'bar',
-          barWidth: '78%',
-          data: data.hours.map((v) => ({
-            value: v,
-            itemStyle: { color: `rgba(51, 99, 255, ${0.18 + (v / max) * 0.82})`, borderRadius: [3, 3, 0, 0] },
-          })),
-        },
-      ],
-    };
-  }, [data, t]);
-
   const cell = (topic: string, src: string) =>
     data?.heatmap.cells.find((c) => c.topic === topic && c.sourceId === src)?.count ?? 0;
   const heatMax = Math.max(1, ...(data?.heatmap.cells.map((c) => c.count) ?? [1]));
-  const wordMax = data?.words[0]?.count ?? 1;
 
   const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
   const kpis = data
@@ -339,7 +262,7 @@ function Analytics() {
               <p className="mb-4 text-[12px] text-muted">
                 Число материалов в сутки · часовой пояс тенанта; красным отмечены всплески
               </p>
-              <Chart option={dailyOption!} height={270} label="Столбчатая диаграмма: публикации по суткам" />
+              <DailyChart days={data.dailyVolume} height={270} />
               {hasIncomplete && (
                 <p className="mt-3 text-[11.5px] leading-relaxed text-faint">
                   Бледные столбцы — сутки, когда сбор ещё не шёл: источники отдают только последние записи,
@@ -432,33 +355,14 @@ function Analytics() {
             <Card className={hasHeat ? 'p-5' : 'p-5 xl:col-span-3'}>
               <h2 className="text-[15px] font-bold">Облако тем</h2>
               <p className="mb-4 text-[12px] text-muted">Частотный анализ заголовков</p>
-              <div
-                className="flex min-h-[240px] flex-wrap items-center justify-center gap-x-3 gap-y-1.5 py-3"
-                role="list"
-                aria-label="Самые частые слова в заголовках"
-              >
-                {data.words.map((w) => (
-                  <span
-                    role="listitem"
-                    key={w.word}
-                    title={`${w.count} упоминаний`}
-                    className="cursor-default font-bold transition hover:text-accent"
-                    style={{
-                      fontSize: 12 + (w.count / wordMax) * 17,
-                      opacity: 0.45 + (w.count / wordMax) * 0.55,
-                    }}
-                  >
-                    {w.word}
-                  </span>
-                ))}
-              </div>
+              <WordCloud words={data.words} />
             </Card>
           </div>
           <div className="grid gap-4 xl:grid-cols-2">
             <Card className="p-5">
               <h2 className="text-[15px] font-bold">Активность по часам суток</h2>
               <p className="mb-4 text-[12px] text-muted">Часовой пояс тенанта: {data.timezone}</p>
-              <Chart option={hoursOption!} height={230} label="Столбчатая диаграмма активности по часам" />
+              <HoursChart hours={data.hours} />
             </Card>
             <Card className="p-5">
               <h2 className="mb-1 text-[15px] font-bold">Наблюдения за период</h2>

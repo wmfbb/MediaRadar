@@ -25,6 +25,7 @@ const NAV: Array<{ group: string; items: NavItem[] }> = [
       { href: '/', label: 'Дашборд', icon: 'dashboard', perm: 'dashboard:read' },
       { href: '/feed', label: 'Лента', icon: 'feed', perm: 'feed:read' },
       { href: '/analytics', label: 'Отчёты и графики', icon: 'chart', perm: 'dashboard:read' },
+      { href: '/entities', label: 'Персоны и организации', icon: 'users', perm: 'dashboard:read' },
     ],
   },
   {

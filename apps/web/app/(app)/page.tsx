@@ -57,7 +57,7 @@ interface Dash {
   };
   topSources: Array<{ id: string; name: string; domain: string; count: number }>;
   geo: { places: Array<{ id: string; name: string; level: string; count: number }>; total: number };
-  persons: { top: Array<{ name: string; count: number }>; total: number };
+  persons: { top: Array<{ id: string; name: string; count: number }>; total: number };
   health: {
     parsers: Array<{
       parser: string;
@@ -425,7 +425,7 @@ function PersonsCard({ data }: { data: Dash }) {
   return (
     <Card className="p-5">
       <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-[15px] font-bold">Персоны (NER)</h2>
+        <h2 className="text-[15px] font-bold">Персоны</h2>
         <Badge tone="ok">{num(data.persons.total)} сущн.</Badge>
       </div>
       <p className="mb-4 text-[12px] text-muted">Упоминания в материалах за период</p>
@@ -433,9 +433,12 @@ function PersonsCard({ data }: { data: Dash }) {
         {data.persons.top.map((p, i) => (
           <li key={p.name}>
             <div className="mb-1 flex items-baseline justify-between">
-              <span className="text-[13px] font-semibold">
+              <Link
+                href={`/entities/${p.id}`}
+                className="text-[13px] font-semibold hover:text-accent hover:underline"
+              >
                 {i + 1}. {p.name}
-              </span>
+              </Link>
               <span className="font-mono text-[12px] text-muted">{num(p.count)} упом.</span>
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-line">
